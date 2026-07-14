@@ -1,0 +1,33 @@
+# Dependabot hält Abhängigkeiten aktuell und öffnet PRs bei bekannten Lücken.
+# Ergänzt die Security-Alerts, die zusätzlich in den Repo-Settings aktiviert
+# werden (Settings → Security → "Dependabot alerts" + "security updates").
+version: 2
+updates:
+  # Angular / npm-Frontend
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  # GitHub-Actions selbst aktuell halten (Versionen der Workflow-Actions)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # PHP-Backend (Composer) — aktivieren, sobald eine composer.json existiert.
+  # Dann "directory" auf den Backend-Ordner anpassen (z. B. "/backend").
+  # - package-ecosystem: "composer"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "backend"

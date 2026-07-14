@@ -1,0 +1,62 @@
+name: Lint
+
+# Fängt schludrigen Code ab, bevor er zum Sicherheitsproblem wird.
+# Frontend: ESLint (inkl. eslint-plugin-security).
+# Backend: PHPStan + PHP_CodeSniffer – läuft automatisch, sobald eine
+# composer.json vorhanden ist, und wird sonst übersprungen.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  eslint:
+    name: ESLint (Angular)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  php:
+    name: PHP (PHPStan + PHPCS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backend vorhanden?
+        id: check
+        shell: bash
+        run: |
+          if [ -f composer.json ]; then
+            echo "php=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "php=false" >> "$GITHUB_OUTPUT"
+            echo "Keine composer.json gefunden – PHP-Checks werden übersprungen."
+          fi
+
+      - name: Setup PHP
+        if: steps.check.outputs.php == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer, phpstan, phpcs
+
+      - name: Composer install
+        if: steps.check.outputs.php == 'true'
+        run: composer install --no-interaction --no-progress
+
+      - name: PHPStan
+        if: steps.check.outputs.php == 'true'
+        run: phpstan analyse
+
+      - name: PHP_CodeSniffer
+        if: steps.check.outputs.php == 'true'
+        run: phpcs

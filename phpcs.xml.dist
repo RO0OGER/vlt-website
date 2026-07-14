@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  PHP_CodeSniffer-Konfiguration fürs PHP-Backend.
+  Greift, sobald Backend-Code + composer.json existieren.
+  Prüft Coding-Standard (PSR-12). Für dedizierte Security-Regeln kann
+  zusätzlich "pheromone/phpcs-security-audit" installiert und eingebunden werden.
+-->
+<ruleset name="vlt-backend">
+    <description>Coding- und Security-Standard fürs PHP-Backend</description>
+
+    <!-- TODO: an den tatsächlichen Backend-Ordner anpassen -->
+    <file>backend</file>
+
+    <!-- Generierte/fremde Dateien ausschließen -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <rule ref="PSR12"/>
+</ruleset>

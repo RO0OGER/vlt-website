@@ -1,0 +1,10 @@
+# PHPStan-Konfiguration fürs PHP-Backend (statische Analyse).
+# Greift, sobald Backend-Code + composer.json existieren.
+# "level" von 0 (locker) bis 9 (streng) – zum Start 6 ist ein guter Kompromiss.
+parameters:
+    level: 6
+    paths:
+        # TODO: an den tatsächlichen Backend-Ordner anpassen (z. B. backend/src)
+        - backend
+    # Optional: Security-fokussierte Regeln nachrüsten, z. B.
+    #   composer require --dev phpstan/phpstan-strict-rules

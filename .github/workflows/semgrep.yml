@@ -1,0 +1,51 @@
+name: SAST (Semgrep)
+
+# Statische Code-Analyse mit fertigen OWASP-/PHP-Regelsets.
+# Deckt das PHP-Backend ab (SQL-Injection, unsauberes Input-Handling, …)
+# und ergänzt CodeQL fürs Frontend. Ergebnisse landen im Security-Tab
+# (Code scanning alerts) via SARIF-Upload.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    name: Semgrep scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      # Regelsets: OWASP Top Ten, PHP, JS/TS und Secret-Detection.
+      # continue-on-error: Findings blockieren den Build (noch) nicht, werden
+      # aber als Alerts im Security-Tab angezeigt. Zum harten Gaten später
+      # das "continue-on-error" entfernen.
+      - name: Run Semgrep
+        continue-on-error: true
+        run: >-
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/php
+          --config p/javascript
+          --config p/typescript
+          --config p/secrets
+          --sarif --output semgrep.sarif
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
