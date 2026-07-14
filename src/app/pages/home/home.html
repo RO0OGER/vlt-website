@@ -1,2 +1,124 @@
-<h1>Home</h1>
-<p>Willkommen auf der Webseite des Verbands.</p>
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="vlt-container hero-grid">
+    <div class="hero-copy">
+      <h1>Verband Lehrende Technologie im kaufmännischen Umfeld</h1>
+      <p>
+        Der Verband Lehrender Technik vernetzt Lehrkräfte zweier Welten —
+        kaufmännisch und technisch — durch Weiterbildung, Veranstaltungen und
+        einen aktiven Austausch unter Kolleg:innen.
+      </p>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-primary btn-lg">Mitglied werden »</button>
+        <button type="button" class="btn btn-ghost btn-lg">Veranstaltungen ansehen</button>
+      </div>
+    </div>
+    <div class="hero-poster" aria-hidden="true">
+      <div class="hero-poster-glow"></div>
+      <div class="hero-poster-caption">[ editorial portrait · drop image ]</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Anlässe ──────────────────────────────────────────────── -->
+<section class="events">
+  <div class="vlt-container">
+    <div class="section-head">
+      <div>
+        <p class="vlt-eyebrow">· Anlässe</p>
+        <h2>Kommende Anlässe.</h2>
+      </div>
+      <a href="#" class="section-link" (click)="$event.preventDefault()">Alle Anlässe ansehen »</a>
+    </div>
+
+    <div class="event-list">
+      @for (ev of events; track ev.t) {
+        <a href="#" class="event-row" (click)="$event.preventDefault()">
+          <div class="event-date">
+            <span class="event-day">{{ ev.day }}</span>
+            <span class="event-mon">{{ ev.mon }} 2026</span>
+          </div>
+          <div class="event-cat">
+            <div class="event-cat-label">{{ ev.cat }}</div>
+            <span class="tag" [class.tag-member]="ev.tag === 'Mitglieder'">{{ ev.tag }}</span>
+          </div>
+          <h3 class="event-title">{{ ev.t }}</h3>
+          <div class="event-meta">
+            <div>{{ ev.loc }}</div>
+            <div class="event-time">{{ ev.time }}</div>
+          </div>
+          <div class="event-arrow">»</div>
+        </a>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ── Aktuelle Beiträge ────────────────────────────────────── -->
+<section class="posts">
+  <div class="vlt-container">
+    <div class="section-head">
+      <div>
+        <p class="vlt-eyebrow">· Aktuelle Beiträge</p>
+        <h2>Lesen, lernen, mitreden.</h2>
+      </div>
+      <a href="#" class="section-link" (click)="$event.preventDefault()">Alle Beiträge ansehen »</a>
+    </div>
+
+    <!-- featured -->
+    <article class="featured">
+      <div class="featured-media">
+        <span class="badge">NEUSTER BEITRAG</span>
+        <span class="media-caption">[ titelbild · drop image ]</span>
+      </div>
+      <div class="featured-body">
+        <div>
+          <div class="post-kicker">{{ featured.cat }} · {{ featured.date }}</div>
+          <h3 class="featured-title">{{ featured.title }}</h3>
+          <p class="featured-excerpt">{{ featured.excerpt }}</p>
+        </div>
+        <div class="featured-foot">
+          <button type="button" class="btn btn-primary">Mehr erfahren »</button>
+          <span class="read">{{ featured.read }} · Lesezeit</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- grid of remaining posts -->
+    <div class="post-grid">
+      @for (p of rest; track p.title) {
+        <article class="post-card">
+          <div class="post-kicker">{{ p.cat }}</div>
+          <h3 class="post-title">{{ p.title }}</h3>
+          <p class="post-excerpt">{{ p.excerpt }}</p>
+          <div class="post-foot">
+            <a href="#" class="post-more" (click)="$event.preventDefault()">Mehr erfahren <span class="arrow">»</span></a>
+            <span class="read">{{ p.read }}</span>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ── Sponsoren ────────────────────────────────────────────── -->
+<section class="sponsors">
+  <div class="vlt-container">
+    <div class="section-head">
+      <div>
+        <p class="vlt-eyebrow">· Sponsoren &amp; Partner</p>
+        <h2 class="sponsors-h2">Wir danken unseren Partnern.</h2>
+      </div>
+      <a href="#" class="section-link" (click)="$event.preventDefault()">Partner werden »</a>
+    </div>
+
+    <div class="sponsor-grid">
+      @for (s of sponsors; track s.name) {
+        <a href="#" class="sponsor" [title]="s.name" (click)="$event.preventDefault()">
+          <span class="sponsor-mark">{{ s.mark }}</span>
+          <span class="sponsor-cap">[ logo · {{ s.name }} ]</span>
+        </a>
+      }
+    </div>
+  </div>
+</section>

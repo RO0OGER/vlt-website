@@ -1,1 +1,106 @@
-/* You can add global styles to this file, and also import other style files */
+/* ── VLT design tokens & global base ─────────────────────────────── */
+:root {
+  --vlt-bg: #f7f7f5;
+  --vlt-nav: #2f2f7f;
+  --vlt-nav-deep: #262676;
+  --vlt-primary: #f2aa2a;
+  --vlt-primary-hover: #d9951f;
+  --vlt-text: #262626;
+  --vlt-card: #ececec;
+  --vlt-rule: #dcdcd6;
+  --vlt-muted: #6b6b66;
+  --vlt-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--vlt-bg);
+  color: var(--vlt-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Centered content column, matches the design's 1280px canvas. */
+.vlt-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 56px;
+}
+
+/* Shared buttons (navbar + page content). */
+.btn {
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 10px 18px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.btn-primary {
+  background: var(--vlt-primary);
+  color: #1a1a1a;
+  border: 0;
+  padding: 11px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: var(--vlt-primary-hover);
+}
+
+.btn-lg {
+  padding: 15px 26px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.btn-ghost.btn-lg {
+  padding: 14px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Monospace eyebrow label used above section headings. */
+.vlt-eyebrow {
+  font-family: var(--vlt-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vlt-muted);
+  margin: 0 0 8px;
+}
+
+@media (max-width: 768px) {
+  .vlt-container {
+    padding: 0 24px;
+  }
+}

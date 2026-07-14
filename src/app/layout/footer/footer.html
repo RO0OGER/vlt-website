@@ -1,5 +1,31 @@
-<footer class="site-footer">
-  <div class="container footer-inner">
-    <p>&copy; {{ year }} Verband. Alle Rechte vorbehalten.</p>
+<footer class="vlt-footer">
+  <div class="vlt-container footer-inner">
+    <div class="footer-cols">
+      <div class="footer-intro">
+        <p>
+          Verband Lehrender Technik — die Stimme der Lehrenden für Technik und
+          Kaufmannschaft in der Schweiz.
+        </p>
+      </div>
+      @for (col of columns; track col.h) {
+        <div class="footer-col">
+          <h4>{{ col.h }}</h4>
+          <ul>
+            @for (l of col.links; track l) {
+              <li><a href="#" (click)="$event.preventDefault()">{{ l }}</a></li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+
+    <div class="footer-bottom">
+      <div>© vlt {{ year }} · Verband Lehrender Technik</div>
+      <div class="footer-legal">
+        <a href="#" (click)="$event.preventDefault()">Impressum</a>
+        <a href="#" (click)="$event.preventDefault()">Datenschutz</a>
+        <a href="#" (click)="$event.preventDefault()">AGB</a>
+      </div>
+    </div>
   </div>
 </footer>

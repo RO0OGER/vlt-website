@@ -1,9 +1,135 @@
-<header>
-  <a routerLink="/">Verband</a>
-  <nav aria-label="Hauptnavigation">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
-    <a routerLink="/ueber-uns" routerLinkActive="active">Über uns</a>
-    <a routerLink="/beitraege" routerLinkActive="active">Beiträge</a>
-    <a routerLink="/kontakt" routerLinkActive="active">Kontakt</a>
-  </nav>
+<header class="vlt-header" (mouseleave)="leaveSoon()">
+  <div class="vlt-container bar">
+    <a
+      routerLink="/"
+      class="brand"
+      aria-label="vlt Startseite"
+      (mouseenter)="hover.set(null)"
+    >
+      <!-- vlt logo: two glyphs + orange arrow that rotates when a panel is open -->
+      <svg class="logo" viewBox="0 0 261.6 174.11" aria-hidden="true">
+        <g fill="#fff">
+          <path d="M131.73,127.13c0,6.6.45,10.65,2.7,14.7,3.45,6.45,9.75,9.9,19.95,9.9,6,0,14.25-1.8,19.8-4.2,2.4-1.05,2.55-1.8,1.95-4.05l-3.15-12.75c-.45-1.5-1.35-1.95-2.7-1.35-5.25,2.25-7.95,3-10.8,3-3.45,0-4.65-1.5-4.65-7.05l-.62-31.48h14.7c1.65,0,2.1-.3,2.55-2.1l3.03-14.75c.45-1.95.45-2.55-2.4-2.55h-17.25v-20.82c0-2.25-.45-2.55-2.85-2.1l-18,1.8c-2.25.15-2.25.6-2.25,2.55v71.25Z" />
+          <path d="M130.81,144.98l-3.3-13.65c-.45-1.05-1.2-1.2-2.25-.75-1.65.6-3.6,1.2-5.85,1.2-1.95,0-3-1.95-3-5.7V42.99c0-2.55-.45-2.55-3.3-2.1l-18,2.85c-1.5.3-2.25,1.35-2.25,2.05v28.92l-14.86-.12c-1.95-.15-2.4-.45-3,1.95l-9.15,32.9c-1.2,4.35-2.7,11.85-3.9,18.9-1.2-7.35-2.55-14.55-3.6-18.9l-8.4-32.9c-.45-1.95-.75-2.1-3-1.95h-20.25c-2.85.15-2.7.9-1.95,3.15l25.65,72.35c.6,1.8.9,2.1,2.7,2.1h16.05c1.95,0,2.25-.3,2.85-2.1l20.86-58.17v28.87l.15,6.95c.15,9.45,1.05,13.95,5.1,18.3,3.45,3.75,9.15,5.7,15.6,5.7,5.25,0,11.85-1.35,16.05-3.9,1.65-1.05,1.5-1.5,1.05-2.85Z" />
+        </g>
+        <g class="logo-arrow" [class.open]="hover() !== null">
+          <path fill="var(--vlt-primary)" d="M210.41,151.06c-.8,1.12-1.44,1.6-1.92,1.6s-1.28-.32-2.56-.8l-13.44-5.76c-2.24-1.12-2.56-2.56-1.12-4.64l18.72-28.32-18.4-28.64c-1.76-2.4-1.6-3.36,1.12-4.64l13.12-6.4c2.56-1.28,2.72-1.28,4.48.8l26.4,35.68c1.76,2.4,1.44,2.56,0,4.48l-26.4,36.64Z" />
+        </g>
+      </svg>
+    </a>
+
+    <!-- Desktop navigation -->
+    <nav class="nav desktop-only" (mouseenter)="cancelLeave()">
+      @for (item of nav; track item.label; let i = $index) {
+        <a
+          href="#"
+          class="nav-link"
+          [class.active]="hover() === i"
+          (click)="$event.preventDefault()"
+          (mouseenter)="enter(i)"
+        >
+          {{ item.label }}
+          @if (item.children.length) {
+            <span class="chev" [class.open]="hover() === i">»</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="actions desktop-only">
+      <button type="button" class="btn btn-ghost" (mouseenter)="hover.set(null)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+          <polyline points="10 17 15 12 10 7" />
+          <line x1="15" y1="12" x2="3" y2="12" />
+        </svg>
+        Login
+      </button>
+      <button type="button" class="btn btn-primary" (mouseenter)="hover.set(null)">
+        Mitglied werden
+      </button>
+    </div>
+
+    <!-- Mobile burger -->
+    <button
+      type="button"
+      class="burger mobile-only"
+      [class.open]="mobileOpen()"
+      [attr.aria-expanded]="mobileOpen()"
+      [attr.aria-label]="mobileOpen() ? 'Menü schließen' : 'Menü öffnen'"
+      (click)="toggleMobile()"
+    >
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- Desktop mega-menu panel -->
+  <div
+    class="megamenu desktop-only"
+    [class.open]="hover() !== null"
+    (mouseenter)="cancelLeave()"
+    (mouseleave)="leaveSoon()"
+  >
+    <div class="megamenu-clip">
+      <div class="vlt-container megamenu-inner">
+        <div class="megamenu-desc">
+          <div class="megamenu-label">· {{ activeItem()?.label }}</div>
+          <p class="megamenu-lead">{{ activeItem()?.desc }}</p>
+          <a href="#" class="megamenu-more" (click)="$event.preventDefault()">Zur Übersicht »</a>
+        </div>
+        <ul class="megamenu-grid">
+          @for (c of activeItem()?.children ?? []; track c.t) {
+            <li>
+              <a href="#" class="megamenu-child" (click)="$event.preventDefault()">
+                <div class="megamenu-child-row">
+                  <span class="megamenu-child-title">{{ c.t }}</span>
+                  <span class="megamenu-child-chev">»</span>
+                </div>
+                <div class="megamenu-child-desc">{{ c.d }}</div>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile dropdown -->
+  <div class="mobile-panel mobile-only" [class.open]="mobileOpen()">
+    <div class="mobile-clip">
+      <div class="mobile-inner">
+        <ul class="mobile-list">
+          @for (item of nav; track item.label; let i = $index) {
+            <li class="mobile-item">
+              @if (item.children.length) {
+                <button type="button" class="mobile-top" (click)="toggleSection(i)">
+                  <span>{{ item.label }}</span>
+                  <span class="chev" [class.open]="openSection() === i">»</span>
+                </button>
+                <div class="mobile-sub" [class.open]="openSection() === i">
+                  <ul>
+                    @for (c of item.children; track c.t) {
+                      <li>
+                        <a href="#" (click)="$event.preventDefault()">
+                          <span>{{ c.t }}</span><span class="chev-dim">»</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              } @else {
+                <a routerLink="/" class="mobile-top mobile-top-link" (click)="toggleMobile()">
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </li>
+          }
+        </ul>
+        <div class="mobile-actions">
+          <button type="button" class="btn btn-ghost">Login</button>
+          <button type="button" class="btn btn-primary">Mitglied werden »</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </header>
