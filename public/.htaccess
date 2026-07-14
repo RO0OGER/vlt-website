@@ -1,0 +1,16 @@
+# SPA-Routing fuer Apache (cyon.ch): alle Anfragen, die keine echte
+# Datei/kein echtes Verzeichnis sind, auf index.html umleiten. Damit
+# funktioniert das Angular-Routing auch beim direkten Aufruf einer URL
+# oder beim Neuladen der Seite.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Vorhandene Dateien und Verzeichnisse direkt ausliefern
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Alles andere an die SPA (index.html) uebergeben
+  RewriteRule ^ index.html [L]
+</IfModule>
