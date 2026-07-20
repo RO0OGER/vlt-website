@@ -28,15 +28,15 @@
         <p class="vlt-eyebrow">· Anlässe</p>
         <h2>Kommende Anlässe.</h2>
       </div>
-      <a href="#" class="section-link" (click)="$event.preventDefault()">Alle Anlässe ansehen »</a>
+      <a routerLink="/verbandsanlaesse" class="section-link">Alle Anlässe ansehen »</a>
     </div>
 
     <div class="event-list">
-      @for (ev of events; track ev.t) {
-        <a href="#" class="event-row" (click)="$event.preventDefault()">
+      @for (ev of events; track ev.id) {
+        <a [routerLink]="['/verbandsanlaesse', ev.id]" class="event-row">
           <div class="event-date">
             <span class="event-day">{{ ev.day }}</span>
-            <span class="event-mon">{{ ev.mon }} 2026</span>
+            <span class="event-mon">{{ ev.mon }} {{ ev.year }}</span>
           </div>
           <div class="event-cat">
             <div class="event-cat-label">{{ ev.cat }}</div>
@@ -62,7 +62,7 @@
         <p class="vlt-eyebrow">· Aktuelle Beiträge</p>
         <h2>Lesen, lernen, mitreden.</h2>
       </div>
-      <a href="#" class="section-link" (click)="$event.preventDefault()">Alle Beiträge ansehen »</a>
+      <a routerLink="/beitraege" class="section-link">Alle Beiträge ansehen »</a>
     </div>
 
     <!-- featured -->
@@ -73,12 +73,14 @@
       </div>
       <div class="featured-body">
         <div>
-          <div class="post-kicker">{{ featured.cat }} · {{ featured.date }}</div>
+          <div class="post-kicker">{{ featured.cat }} · {{ featured.dateLabel }}</div>
           <h3 class="featured-title">{{ featured.title }}</h3>
           <p class="featured-excerpt">{{ featured.excerpt }}</p>
         </div>
         <div class="featured-foot">
-          <button type="button" class="btn btn-primary">Mehr erfahren »</button>
+          <a [routerLink]="['/beitraege', featured.id]" class="btn btn-primary">
+            Mehr erfahren »
+          </a>
           <span class="read">{{ featured.read }} · Lesezeit</span>
         </div>
       </div>
@@ -86,13 +88,15 @@
 
     <!-- grid of remaining posts -->
     <div class="post-grid">
-      @for (p of rest; track p.title) {
+      @for (p of rest; track p.id) {
         <article class="post-card">
           <div class="post-kicker">{{ p.cat }}</div>
           <h3 class="post-title">{{ p.title }}</h3>
           <p class="post-excerpt">{{ p.excerpt }}</p>
           <div class="post-foot">
-            <a href="#" class="post-more" (click)="$event.preventDefault()">Mehr erfahren <span class="arrow">»</span></a>
+            <a [routerLink]="['/beitraege', p.id]" class="post-more"
+              >Mehr erfahren <span class="arrow">»</span></a
+            >
             <span class="read">{{ p.read }}</span>
           </div>
         </article>

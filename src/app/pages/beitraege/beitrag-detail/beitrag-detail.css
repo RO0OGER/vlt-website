@@ -1,0 +1,290 @@
+:host {
+  display: block;
+}
+
+.page {
+  padding: 28px 0 96px;
+}
+
+/*
+ * Der Fliesstext laeuft schmaler als das Hauptbild – rund 70 Zeichen je
+ * Zeile bleiben lesbar, das Bild darf die volle Breite nutzen.
+ */
+.column {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 56px;
+}
+
+/* ── Brotkrumen ───────────────────────────────────────────────── */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--vlt-mono);
+  font-size: 12px;
+  color: var(--vlt-muted);
+}
+
+.crumbs a {
+  color: var(--vlt-muted);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--vlt-text);
+}
+
+.crumb-current {
+  color: var(--vlt-text);
+}
+
+/* ── Hauptbild ────────────────────────────────────────────────── */
+.hero {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 18px;
+  aspect-ratio: 1280 / 520;
+  object-fit: cover;
+}
+
+.hero-empty,
+.section-img-empty {
+  background: var(--vlt-card);
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(38 38 38 / 0.05) 0 2px,
+    transparent 2px 16px
+  );
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.img-cap {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  color: var(--vlt-muted);
+}
+
+/* ── Titel und Kopfzeile ──────────────────────────────────────── */
+h1 {
+  margin: 48px 0 0;
+  font-size: 48px;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  text-wrap: pretty;
+}
+
+.meta {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  background: var(--vlt-primary);
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+
+.byline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--vlt-muted);
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--vlt-nav);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.author {
+  color: var(--vlt-text);
+  font-weight: 500;
+}
+
+.sep {
+  color: var(--vlt-rule);
+}
+
+/* ── Abschnitte ───────────────────────────────────────────────── */
+.sections {
+  margin-top: 36px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 44px;
+}
+
+.section-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+.section-images {
+  display: grid;
+  gap: 20px;
+}
+
+/* Zwei Bilder stehen auf Desktop nebeneinander, auf Mobile untereinander. */
+.section-images.is-pair {
+  grid-template-columns: 1fr 1fr;
+}
+
+.section-img {
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.section-images.is-pair .section-img {
+  border-radius: 14px;
+}
+
+/* ── Fuss ─────────────────────────────────────────────────────── */
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 32px;
+  border-top: 1px solid var(--vlt-rule);
+}
+
+.foot-link {
+  color: var(--vlt-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--vlt-text);
+  padding-bottom: 3px;
+}
+
+.foot-link span {
+  color: var(--vlt-primary);
+}
+
+/* ── Nicht gefunden ───────────────────────────────────────────── */
+.not-found-text {
+  margin: 12px 0 28px;
+  color: var(--vlt-muted);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+/* ── Mobile ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page {
+    padding: 16px 0 48px;
+  }
+
+  .column {
+    padding: 0 24px;
+  }
+
+  .crumbs {
+    font-size: 11px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /*
+   * Randlos: das Hauptbild nutzt auf Mobile die volle Breite und bricht
+   * dafuer aus dem Innenabstand des Containers aus.
+   */
+  .hero {
+    margin: 12px -24px 0;
+    width: auto;
+    border-radius: 0;
+    aspect-ratio: 390 / 240;
+  }
+
+  h1 {
+    margin-top: 24px;
+    font-size: 28px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .meta {
+    margin-top: 14px;
+    gap: 10px 12px;
+  }
+
+  .cat {
+    font-size: 10px;
+    padding: 4px 9px;
+  }
+
+  .byline {
+    font-size: 13px;
+  }
+
+  .avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .sections {
+    margin-top: 22px;
+  }
+
+  .section {
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .section-text {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .section-images,
+  .section-images.is-pair {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .section-img,
+  .section-images.is-pair .section-img {
+    border-radius: 12px;
+  }
+
+  .not-found-text {
+    font-size: 15px;
+  }
+}

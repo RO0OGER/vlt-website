@@ -323,8 +323,10 @@
   gap: 16px;
 }
 
+/* Der Button ist ein Link auf den Beitrag – Button-Optik, Link-Verhalten. */
 .featured-foot .btn {
   padding: 13px 22px;
+  text-decoration: none;
 }
 
 /* grid */

@@ -1,0 +1,101 @@
+@if (post(); as p) {
+  <article class="page">
+    <div class="vlt-container">
+      <!-- ── Brotkrumen ───────────────────────────────────────── -->
+      <nav class="crumbs" aria-label="Brotkrumen">
+        <a routerLink="/">Startseite</a>
+        <span aria-hidden="true">»</span>
+        <a routerLink="/beitraege">Beiträge</a>
+        <span aria-hidden="true">»</span>
+        <span class="crumb-current">{{ p.cat }}</span>
+      </nav>
+
+      <!-- ── Hauptbild ────────────────────────────────────────── -->
+      @if (p.cover.src) {
+        <img class="hero" [src]="p.cover.src" [alt]="p.cover.alt" />
+      } @else {
+        <!-- Platzhalter, solange im CMS kein Bild hinterlegt ist. -->
+        <div class="hero hero-empty">
+          <span class="img-cap">[ {{ p.cover.alt }} ]</span>
+        </div>
+      }
+    </div>
+
+    <!-- ── Titel und Kopfzeile ────────────────────────────────── -->
+    <div class="column">
+      <h1>{{ p.title }}</h1>
+
+      <div class="meta">
+        <div class="cats">
+          @for (c of categories(); track c) {
+            <span class="cat">{{ c }}</span>
+          }
+        </div>
+        <div class="byline">
+          @if (p.author; as author) {
+            <span class="avatar" aria-hidden="true">{{ initials(author) }}</span>
+            <span class="author">{{ author }}</span>
+            <span class="sep" aria-hidden="true">·</span>
+          }
+          <time [attr.datetime]="p.date">{{ dateLabel() }}</time>
+          <span class="sep" aria-hidden="true">·</span>
+          <span>{{ p.read }} Lesezeit</span>
+        </div>
+      </div>
+
+      <!-- ── Abschnitte ─────────────────────────────────────────
+           Anzahl und Bebilderung kommen aus den Daten: null, ein
+           oder zwei Bilder je Abschnitt. -->
+      <div class="sections">
+        @for (s of sections(); track $index) {
+          <section class="section">
+            <p class="section-text">{{ s.text }}</p>
+
+            @if (images(s); as imgs) {
+              @if (imgs.length) {
+                <div class="section-images" [class.is-pair]="imgs.length === 2">
+                  @for (img of imgs; track $index) {
+                    @if (img.src) {
+                      <img
+                        class="section-img"
+                        [src]="img.src"
+                        [alt]="img.alt"
+                        [style.aspect-ratio]="1 / img.ratio"
+                        loading="lazy"
+                      />
+                    } @else {
+                      <div
+                        class="section-img section-img-empty"
+                        [style.aspect-ratio]="1 / img.ratio"
+                      >
+                        <span class="img-cap">[ {{ img.alt }} ]</span>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            }
+          </section>
+        }
+      </div>
+
+      <div class="foot">
+        <a routerLink="/beitraege" class="foot-link">
+          Alle Beiträge ansehen <span aria-hidden="true">»</span>
+        </a>
+      </div>
+    </div>
+  </article>
+} @else {
+  <section class="page">
+    <div class="vlt-container">
+      <p class="vlt-eyebrow">· Beiträge</p>
+      <h1>Beitrag nicht gefunden</h1>
+      <p class="not-found-text">
+        Dieser Beitrag existiert nicht oder wurde entfernt. Prüfen Sie die Adresse
+        oder kehren Sie zur Übersicht zurück.
+      </p>
+      <p><a routerLink="/beitraege" class="btn btn-primary btn-lg">Alle Beiträge »</a></p>
+    </div>
+  </section>
+}
