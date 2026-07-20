@@ -1,0 +1,120 @@
+<div class="tl">
+  @for (row of years(); track row.year) {
+    <div class="tl-row">
+      <div class="tl-year">{{ row.year }}</div>
+
+      <div class="tl-track" #track>
+        <!-- Monatsraster -->
+        @for (m of months; track $index) {
+          <div class="tl-tick" [style.left.%]="pct($index)"></div>
+          <div class="tl-month" [style.left.%]="pct($index)">{{ m }}</div>
+        }
+
+        <div class="tl-line"></div>
+
+        <!-- Termine -->
+        <div class="tl-points">
+          @for (p of row.placed; track $index) {
+            @if (p.type === 'single') {
+              <!--
+                Einzeltermin: der ganze Punkt ist der Link zur Detailseite –
+                Datum, Titel und Karte fuehren gleichermassen dorthin.
+                Maus- und Fokus-Handler sitzen am Wrapper, damit die Karte
+                offen bleibt, wenn die Maus vom Punkt auf sie wechselt.
+              -->
+              <a
+                class="tl-point is-link"
+                [class.is-up]="p.side === 'up'"
+                [class.is-down]="p.side === 'down'"
+                [class.is-open]="isOpen(p)"
+                [style.left.%]="pct(p.x)"
+                [routerLink]="['/verbandsanlaesse', p.ev.id]"
+                [attr.aria-label]="pointLabel(p)"
+                (mouseenter)="onEnter(p)"
+                (mouseleave)="onLeave()"
+                (focusin)="onEnter(p)"
+                (focusout)="onLeave()"
+              >
+                <span class="tl-dot"></span>
+                <span class="tl-stem"></span>
+                <span class="tl-label" [style.transform]="labelTransform(p)">
+                  <span class="tl-label-date">{{ day(p.ev.date) }}. {{ month(p.ev.date) }}</span>
+                  <span class="tl-label-sub">{{ p.ev.t }}</span>
+                </span>
+
+                <!-- Inhalt steckt im aria-label des Links. -->
+                <span
+                  class="tl-card"
+                  [class.is-open]="isOpen(p)"
+                  [style.transform]="cardTransform(p)"
+                  aria-hidden="true"
+                >
+                  <span class="tl-card-media" [style.background]="p.ev.img">
+                    <span class="tl-card-media-cap">[ bild ]</span>
+                  </span>
+                  <span class="tl-card-body">
+                    <span class="tag" [class.tag-member]="p.ev.tag === 'Mitglieder'">{{ p.ev.tag }}</span>
+                    <span class="tl-card-date">
+                      {{ day(p.ev.date) }}. {{ month(p.ev.date) }} {{ year(p.ev.date) }}
+                    </span>
+                    <span class="tl-card-title">{{ p.ev.t }}</span>
+                    <span class="tl-card-text">{{ p.ev.d }}</span>
+                  </span>
+                </span>
+              </a>
+            } @else {
+              <!--
+                Sammelpunkt: fuehrt auf keine einzelne Seite, deshalb ist hier
+                jeder Termin der Karte ein eigener Link. Die Karte ist im
+                geschlossenen Zustand inert – sonst waeren unsichtbare Links
+                anspringbar.
+              -->
+              <div
+                class="tl-point"
+                [class.is-up]="p.side === 'up'"
+                [class.is-down]="p.side === 'down'"
+                [class.is-open]="isOpen(p)"
+                [style.left.%]="pct(p.x)"
+                (mouseenter)="onEnter(p)"
+                (mouseleave)="onLeave()"
+                (focusin)="onEnter(p)"
+                (focusout)="onLeave()"
+              >
+                <span class="tl-dot is-cluster">
+                  <span class="tl-dot-count">{{ p.items.length }}</span>
+                </span>
+                <span class="tl-stem"></span>
+                <span class="tl-label" [style.transform]="labelTransform(p)">
+                  <span class="tl-label-title">{{ p.items.length }} Veranstaltungen</span>
+                  <span class="tl-label-sub is-mono">
+                    {{ month(p.items[0].date) }} {{ year(p.items[0].date) }}
+                  </span>
+                </span>
+
+                <div
+                  class="tl-card is-cluster"
+                  [class.is-open]="isOpen(p)"
+                  [style.transform]="cardTransform(p)"
+                  [attr.inert]="isOpen(p) ? null : ''"
+                >
+                  <div class="tl-card-head">
+                    {{ p.items.length }} Termine · {{ month(p.items[0].date) }} {{ year(p.items[0].date) }}
+                  </div>
+                  @for (ev of p.items; track ev.id) {
+                    <a class="tl-card-row" [routerLink]="['/verbandsanlaesse', ev.id]">
+                      <span class="tl-card-row-head">
+                        <span class="tl-card-row-date">{{ shortDate(ev.date) }}</span>
+                        <span class="tl-card-row-title">{{ ev.t }}</span>
+                      </span>
+                      <span class="tl-card-text">{{ ev.d }}</span>
+                    </a>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

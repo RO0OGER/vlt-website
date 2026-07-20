@@ -1,0 +1,213 @@
+@if (event(); as ev) {
+  <article class="page">
+    <!-- ── Kopfzeile mit Webcode ──────────────────────────────── -->
+    <div class="webcode-bar">
+      <div class="vlt-container webcode-inner">
+        <a routerLink="/verbandsanlaesse" class="back">
+          <span class="back-arrow" aria-hidden="true">«</span> Alle Anlässe
+        </a>
+        <div class="webcode">
+          <span class="webcode-label">Webcode</span>
+          <span class="webcode-value">{{ ev.webcode }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="vlt-container">
+      <!-- ── Karussell ────────────────────────────────────────── -->
+      @if (photos().length) {
+        <section class="gallery" aria-label="Bilder zum Anlass">
+          <div class="stage">
+            @for (photo of photos(); track $index) {
+              <figure
+                class="slide"
+                [class.is-active]="index() === $index"
+                [attr.aria-hidden]="index() !== $index"
+              >
+                @if (photo.src) {
+                  <img [src]="photo.src" [alt]="photo.alt" />
+                } @else {
+                  <!-- Platzhalter, solange im CMS kein Bild hinterlegt ist. -->
+                  <div class="slide-placeholder" [style.background]="photo.color">
+                    <span class="slide-cap">[ {{ photo.alt }} ]</span>
+                  </div>
+                }
+              </figure>
+            }
+
+            @if (photos().length > 1) {
+              <button type="button" class="nav prev" (click)="prev()" aria-label="Vorheriges Bild">«</button>
+              <button type="button" class="nav next" (click)="next()" aria-label="Nächstes Bild">»</button>
+              <div class="counter">{{ index() + 1 }} / {{ photos().length }}</div>
+            }
+          </div>
+
+          @if (photos().length > 1) {
+            <div class="dots">
+              @for (photo of photos(); track $index) {
+                <button
+                  type="button"
+                  class="dot"
+                  [class.is-active]="index() === $index"
+                  [attr.aria-current]="index() === $index"
+                  [attr.aria-label]="'Bild ' + ($index + 1) + ': ' + photo.alt"
+                  (click)="go($index)"
+                ></button>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ── Titel ────────────────────────────────────────────── -->
+      <header class="head">
+        <p class="kicker">{{ ev.kicker }}</p>
+        <h1>{{ ev.t }}</h1>
+        <p class="place">{{ ev.location.name }}, {{ ev.location.city }}</p>
+      </header>
+
+      <div class="grid">
+        <!-- ── Inhalt ─────────────────────────────────────────── -->
+        <div class="main">
+          @if (ev.bodyTitle || ev.body?.length) {
+            <section class="block">
+              @if (ev.bodyTitle) {
+                <h2>{{ ev.bodyTitle }}</h2>
+              }
+              @for (para of ev.body ?? []; track $index) {
+                <p class="body-text">{{ para }}</p>
+              }
+            </section>
+          }
+
+          @if (ev.documents?.length) {
+            <section class="block">
+              <h3 class="block-title">Dokumente</h3>
+              <ul class="docs">
+                @for (doc of ev.documents; track doc.label) {
+                  <li>
+                    <a [href]="doc.href" class="doc">
+                      <span class="doc-label">{{ doc.label }}</span>
+                      @if (doc.meta) {
+                        <span class="doc-meta">{{ doc.meta }}</span>
+                      }
+                      <span class="doc-arrow" aria-hidden="true">»</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          @if (ev.registrationUrl) {
+            <section class="block">
+              <a [href]="ev.registrationUrl" class="btn btn-primary btn-lg">
+                Zur Anmeldung <span aria-hidden="true">»</span>
+              </a>
+            </section>
+          }
+
+          @if (ev.categories?.length || ev.audience?.length || ev.admission) {
+            <section class="block">
+              <h3 class="block-title">Einordnung</h3>
+              <dl class="facts">
+                @if (ev.categories?.length) {
+                  <dt>Kategorien</dt>
+                  <dd>
+                    <ul class="chips">
+                      @for (cat of ev.categories; track cat) {
+                        <li class="chip">{{ cat }}</li>
+                      }
+                    </ul>
+                  </dd>
+                }
+                @if (ev.audience?.length) {
+                  <dt>Zielgruppe</dt>
+                  <dd>
+                    <ul class="chips">
+                      @for (group of ev.audience; track group) {
+                        <li class="chip is-plain">{{ group }}</li>
+                      }
+                    </ul>
+                  </dd>
+                }
+                @if (ev.admission) {
+                  <dt>Zutrittskonditionen</dt>
+                  <dd class="fact-text">{{ ev.admission }}</dd>
+                }
+              </dl>
+            </section>
+          }
+        </div>
+
+        <!-- ── Eckdaten ───────────────────────────────────────── -->
+        <aside class="aside">
+          <section class="card">
+            <h3 class="card-title">Datum</h3>
+            <p class="date">{{ fullDate() }}</p>
+            <p class="time">{{ timeRange() }}</p>
+            <button type="button" class="btn btn-ghost-dark" (click)="addToCalendar()">
+              <span aria-hidden="true">+</span> Erinnerung im Kalender
+            </button>
+          </section>
+
+          @if (ev.prices?.length) {
+            <section class="card">
+              <h3 class="card-title">Preis</h3>
+              <dl class="prices">
+                @for (tier of ev.prices; track tier.label) {
+                  <div class="price-row">
+                    <dt>{{ tier.label }}</dt>
+                    <dd>{{ tier.value }}</dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
+
+          <section class="card">
+            <h3 class="card-title">Ort</h3>
+            <address class="address">
+              <strong>{{ ev.location.name }}</strong>
+              {{ ev.location.street }}<br />
+              {{ ev.location.zip }} {{ ev.location.city }}
+            </address>
+
+            @if (mapUrl(); as src) {
+              <div class="map">
+                <iframe
+                  [src]="src"
+                  [title]="'Karte: ' + ev.location.name"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </div>
+            }
+
+            <div class="map-links">
+              @if (mapLink(); as href) {
+                <a [href]="href" target="_blank" rel="noopener noreferrer" class="map-link">
+                  Grössere Karte <span aria-hidden="true">»</span>
+                </a>
+              }
+              <a routerLink="/kontakt" class="map-link">
+                Frage zum Anlass <span aria-hidden="true">»</span>
+              </a>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </article>
+} @else {
+  <section class="page">
+    <div class="vlt-container">
+      <p class="vlt-eyebrow">· Verbandsanlässe</p>
+      <h1>Anlass nicht gefunden</h1>
+      <p class="body-text">
+        Dieser Anlass existiert nicht oder ist nicht mehr aufgeschaltet.
+      </p>
+      <p><a routerLink="/verbandsanlaesse" class="btn btn-primary btn-lg">Alle Anlässe »</a></p>
+    </div>
+  </section>
+}

@@ -1,0 +1,64 @@
+<section class="page">
+  <div class="vlt-container">
+    <p class="vlt-eyebrow">· Verbandsanlässe</p>
+    <h1>Verbandsanlässe</h1>
+
+    <div class="view-switch">
+      @for (v of views; track v.key) {
+        <button
+          type="button"
+          class="view-btn"
+          [class.is-active]="view() === v.key"
+          [attr.aria-pressed]="view() === v.key"
+          (click)="view.set(v.key)"
+        >
+          {{ v.label }}
+        </button>
+      }
+    </div>
+
+    <!--
+      Gilt fuer beide Ansichten: der Zeitraum bleibt beim Umschalten gleich,
+      und auf Mobile (nur Liste) ist die Vergangenheit ebenso erreichbar.
+    -->
+    @if (earlierYear() !== null || showsPast()) {
+      <div class="year-nav">
+        @if (earlierYear(); as y) {
+          <button type="button" class="year-btn" (click)="showEarlier()">
+            <span class="year-btn-arrow" aria-hidden="true">«</span>
+            Anlässe {{ y }} anzeigen
+          </button>
+        }
+        @if (showsPast()) {
+          <button type="button" class="year-btn" (click)="showUpcomingOnly()">
+            Nur kommende Anlässe
+            <span class="year-btn-arrow" aria-hidden="true">»</span>
+          </button>
+        }
+      </div>
+    }
+
+    @if (effectiveView() === 'timeline') {
+      <div class="timeline-wrap">
+        <app-event-timeline [events]="visibleEvents()" />
+      </div>
+    } @else {
+      <div class="event-list">
+        @for (ev of rows(); track ev.id) {
+          <a [routerLink]="['/verbandsanlaesse', ev.id]" class="event-row">
+            <div class="event-date">
+              <span class="event-day">{{ ev.day }}</span>
+              <span class="event-mon">{{ ev.mon }} {{ ev.yy }}</span>
+            </div>
+            <div class="event-body">
+              <span class="tag" [class.tag-member]="ev.tag === 'Mitglieder'">{{ ev.tag }}</span>
+              <h3 class="event-title">{{ ev.t }}</h3>
+              <div class="event-text">{{ ev.d }}</div>
+            </div>
+            <span class="event-arrow">»</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</section>

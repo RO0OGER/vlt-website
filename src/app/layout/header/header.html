@@ -80,13 +80,23 @@
         <ul class="megamenu-grid">
           @for (c of activeItem()?.children ?? []; track c.t) {
             <li>
-              <a href="#" class="megamenu-child" (click)="$event.preventDefault()">
-                <div class="megamenu-child-row">
-                  <span class="megamenu-child-title">{{ c.t }}</span>
-                  <span class="megamenu-child-chev">»</span>
-                </div>
-                <div class="megamenu-child-desc">{{ c.d }}</div>
-              </a>
+              @if (c.link) {
+                <a [routerLink]="c.link" class="megamenu-child" (click)="hover.set(null)">
+                  <div class="megamenu-child-row">
+                    <span class="megamenu-child-title">{{ c.t }}</span>
+                    <span class="megamenu-child-chev">»</span>
+                  </div>
+                  <div class="megamenu-child-desc">{{ c.d }}</div>
+                </a>
+              } @else {
+                <a href="#" class="megamenu-child" (click)="$event.preventDefault()">
+                  <div class="megamenu-child-row">
+                    <span class="megamenu-child-title">{{ c.t }}</span>
+                    <span class="megamenu-child-chev">»</span>
+                  </div>
+                  <div class="megamenu-child-desc">{{ c.d }}</div>
+                </a>
+              }
             </li>
           }
         </ul>
@@ -110,9 +120,15 @@
                   <ul>
                     @for (c of item.children; track c.t) {
                       <li>
-                        <a href="#" (click)="$event.preventDefault()">
-                          <span>{{ c.t }}</span><span class="chev-dim">»</span>
-                        </a>
+                        @if (c.link) {
+                          <a [routerLink]="c.link" (click)="toggleMobile()">
+                            <span>{{ c.t }}</span><span class="chev-dim">»</span>
+                          </a>
+                        } @else {
+                          <a href="#" (click)="$event.preventDefault()">
+                            <span>{{ c.t }}</span><span class="chev-dim">»</span>
+                          </a>
+                        }
                       </li>
                     }
                   </ul>

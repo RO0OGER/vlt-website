@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 interface NavChild {
   t: string;
   d: string;
+  /** Route des Eintrags. Ohne link bleibt er ein Platzhalter (Seite fehlt noch). */
+  link?: string;
 }
 
 interface NavItem {
@@ -50,7 +52,7 @@ export class Header {
       children: [
         { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick' },
         { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe' },
-        { t: 'Verbandsanlässe', d: 'Jahresversammlung, Tagungen, Treffen' },
+        { t: 'Verbandsanlässe', d: 'Jahresversammlung, Tagungen, Treffen', link: '/verbandsanlaesse' },
         { t: 'Digitaler Wandel', d: 'Schwerpunktthema des Verbands' },
         { t: 'Aktuell', d: 'Neuigkeiten und Mitteilungen' },
       ],

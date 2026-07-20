@@ -1,0 +1,400 @@
+/*
+ * Geometrie der Achse. Alle Abstaende sind relativ zur Linie (y = 0):
+ * Punkt -> Steg -> Beschriftung nach oben oder unten, die Karte jeweils
+ * auf der Gegenseite.
+ */
+:host {
+  display: block;
+
+  --dot-gap: 8px;    /* Abstand Linie -> Steg */
+  --stem-h: 40px;    /* Laenge des Stegs */
+  --label-gap: 54px; /* Abstand Linie -> Beschriftung */
+  --card-gap: 28px;  /* Abstand Linie -> Karte */
+}
+
+.tl {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+.tl-row {
+  display: flex;
+  gap: 24px;
+}
+
+.tl-year {
+  flex-shrink: 0;
+  width: 88px;
+  padding-top: 4px;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/*
+ * Die Spur fuellt die verfuegbare Breite – die Termine sitzen in Prozent,
+ * daher scrollt hier nichts. Karten duerfen ueber den Rand hinausragen.
+ */
+.tl-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 300px;
+}
+
+/* ── Monatsraster ─────────────────────────────────────────────── */
+.tl-tick {
+  position: absolute;
+  top: 146px;
+  width: 1px;
+  height: 8px;
+  background: var(--vlt-rule);
+}
+
+.tl-month {
+  position: absolute;
+  top: 162px;
+  padding-left: 6px;
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  color: var(--vlt-rule);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tl-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 150px;
+  height: 3px;
+  background: var(--vlt-rule);
+  border-radius: 2px;
+}
+
+/* Nullhoher Anker auf der Linie – alle Termine haengen daran. */
+.tl-points {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 150px;
+  height: 0;
+}
+
+/*
+ * Der Punkt ist selbst nullgross; seine Kinder (Punkt, Steg, Beschriftung,
+ * Karte) ragen heraus und bilden zusammen die Trefferflaeche. Bei
+ * Einzelterminen ist er ein Link, bei Sammelpunkten ein blosser Wrapper.
+ */
+.tl-point {
+  position: absolute;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 1;
+}
+
+.tl-point.is-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tl-point:focus {
+  outline: none;
+}
+
+.tl-point.is-open {
+  z-index: 60;
+}
+
+/* ── Punkt ────────────────────────────────────────────────────── */
+.tl-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--vlt-nav);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.2s,
+    border-color 0.2s, box-shadow 0.2s;
+}
+
+.tl-dot.is-cluster {
+  width: 30px;
+  height: 30px;
+  background: var(--vlt-nav);
+}
+
+.tl-point.is-open .tl-dot {
+  transform: translate(-50%, -50%) scale(1.25);
+  background: var(--vlt-primary);
+  border-color: var(--vlt-primary);
+  box-shadow: 0 0 0 6px rgb(242 170 42 / 0.18);
+}
+
+/* Tastaturfokus: der Link selbst ist nullgross, der Ring sitzt am Punkt. */
+.tl-point:focus-visible .tl-dot {
+  box-shadow: 0 0 0 3px var(--vlt-bg), 0 0 0 6px var(--vlt-nav);
+}
+
+.tl-dot-count {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  transition: color 0.2s;
+}
+
+.tl-point.is-open .tl-dot-count {
+  color: #1a1a1a;
+}
+
+/* ── Steg und Beschriftung ────────────────────────────────────── */
+.tl-stem {
+  position: absolute;
+  left: 0;
+  transform: translateX(-50%);
+  width: 2px;
+  height: var(--stem-h);
+  background: var(--vlt-rule);
+  transition: background 0.2s;
+}
+
+.tl-point.is-up .tl-stem {
+  bottom: var(--dot-gap);
+}
+
+.tl-point.is-down .tl-stem {
+  top: var(--dot-gap);
+}
+
+.tl-point.is-open .tl-stem {
+  background: var(--vlt-primary);
+}
+
+/* Deckt die Linie ab, wo die Beschriftung sie kreuzt. */
+.tl-label {
+  position: absolute;
+  left: 0;
+  display: block;
+  width: 140px;
+  text-align: center;
+  background: var(--vlt-bg);
+}
+
+.tl-point.is-up .tl-label {
+  bottom: var(--label-gap);
+}
+
+.tl-point.is-down .tl-label {
+  top: var(--label-gap);
+}
+
+.tl-label-date {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--vlt-text);
+}
+
+.tl-label-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vlt-text);
+}
+
+.tl-label-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vlt-muted);
+  line-height: 1.3;
+}
+
+.tl-label-sub.is-mono {
+  margin-top: 3px;
+  font-family: var(--vlt-mono);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tl-point.is-open .tl-label-date,
+.tl-point.is-open .tl-label-title {
+  color: var(--vlt-primary-hover);
+}
+
+/* ── Detailkarte ──────────────────────────────────────────────── */
+.tl-card {
+  position: absolute;
+  left: 0;
+  display: block;
+  width: 210px;
+  background: #fff;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: left;
+  z-index: 100;
+  opacity: 0;
+  /* Geschlossen nie im Weg der Maus. transform kommt aus der Komponente. */
+  pointer-events: none;
+  transform-origin: center;
+  transition: opacity 0.18s ease, transform 0.24s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.tl-card.is-open {
+  opacity: 1;
+  box-shadow: 0 22px 44px -20px rgb(47 47 127 / 0.32);
+  /* Offen bedienbar: die Maus darf vom Punkt auf die Karte wechseln. */
+  pointer-events: auto;
+}
+
+/* Karte immer gegenueber der Beschriftung. */
+.tl-point.is-up .tl-card {
+  top: var(--card-gap);
+}
+
+.tl-point.is-down .tl-card {
+  bottom: var(--card-gap);
+}
+
+.tl-card-media {
+  display: flex;
+  height: 84px;
+  align-items: flex-end;
+  padding: 10px;
+}
+
+.tl-card-media-cap {
+  font-family: var(--vlt-mono);
+  font-size: 9px;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.tl-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 12px 13px 13px;
+}
+
+.tl-card-date {
+  display: block;
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  color: var(--vlt-primary-hover);
+  letter-spacing: 0.06em;
+}
+
+.tl-card-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--vlt-text);
+}
+
+.tl-card-text {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--vlt-muted);
+}
+
+/* ── Sammelpunkt-Karte ────────────────────────────────────────── */
+.tl-card-head {
+  padding: 10px 12px;
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vlt-muted);
+  border-bottom: 1px solid var(--vlt-rule);
+}
+
+/* Jeder Termin des Sammelpunkts ist ein eigener Link. */
+.tl-card-row {
+  display: block;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--vlt-rule);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.tl-card-row:last-child {
+  border-bottom: 0;
+}
+
+.tl-card-row:hover,
+.tl-card-row:focus-visible {
+  background: var(--vlt-card);
+  outline: none;
+}
+
+.tl-card-row:focus-visible .tl-card-row-title {
+  color: var(--vlt-primary-hover);
+}
+
+.tl-card-row-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 3px;
+}
+
+.tl-card-row-date {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  color: var(--vlt-primary-hover);
+  white-space: nowrap;
+}
+
+.tl-card-row-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--vlt-text);
+}
+
+/* Tag-Pille. */
+.tag {
+  display: inline-block;
+  font-family: var(--vlt-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--vlt-primary);
+  color: #1a1a1a;
+}
+
+.tag.tag-member {
+  background: var(--vlt-nav);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-dot,
+  .tl-stem,
+  .tl-card {
+    transition-duration: 0.01ms;
+  }
+}
