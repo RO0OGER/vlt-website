@@ -90,14 +90,14 @@ export class Header {
 
   readonly activeItem = computed(() => {
     const i = this.hover();
-    return i != null ? this.nav[i] : null;
+    return i != null ? (this.nav.at(i) ?? null) : null;
   });
 
   private closeTimer: ReturnType<typeof setTimeout> | undefined;
 
   enter(i: number): void {
     clearTimeout(this.closeTimer);
-    this.hover.set(this.nav[i].children.length ? i : null);
+    this.hover.set(this.nav.at(i)?.children.length ? i : null);
   }
 
   leaveSoon(): void {
@@ -114,7 +114,7 @@ export class Header {
   }
 
   toggleSection(i: number): void {
-    if (!this.nav[i].children.length) return;
+    if (!this.nav.at(i)?.children.length) return;
     this.openSection.update((cur) => (cur === i ? null : i));
   }
 }

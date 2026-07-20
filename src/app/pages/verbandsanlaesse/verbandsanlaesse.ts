@@ -42,7 +42,7 @@ const NARROW = '(max-width: 900px)';
   styleUrl: './verbandsanlaesse.css',
 })
 export class Verbandsanlaesse {
-  readonly views: ReadonlyArray<{ key: View; label: string }> = [
+  readonly views: readonly { key: View; label: string }[] = [
     { key: 'timeline', label: 'Zeitstrahl' },
     { key: 'list', label: 'Liste' },
   ];
