@@ -1,0 +1,259 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.cw-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.cw-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+  max-width: 900px;
+}
+
+/* ── Hauptüberschrift ─────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 40px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+/* ── Unterüberschrift ─────────────────────────────────────────────── */
+.subheading {
+  margin: 0 0 40px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: left;
+  color: var(--vlt-text);
+}
+
+/* ── Logo Container ───────────────────────────────────────────────── */
+.logo-container {
+  margin: 0 0 56px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cw-logo {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+/* ── Text Sections ────────────────────────────────────────────────── */
+.text-section {
+  margin-bottom: 40px;
+}
+
+.text-section p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--vlt-text);
+  text-align: left;
+}
+
+/* ── Links ────────────────────────────────────────────────────────── */
+.accent-link {
+  color: var(--vlt-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+  border-bottom: 1px solid var(--vlt-primary);
+  padding-bottom: 2px;
+}
+
+.accent-link:hover {
+  color: var(--vlt-primary-hover);
+  border-bottom-color: var(--vlt-primary-hover);
+}
+
+.primary-link {
+  color: var(--vlt-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+  border-bottom: 1px solid var(--vlt-primary);
+  padding-bottom: 2px;
+}
+
+.primary-link:hover {
+  color: var(--vlt-primary-hover);
+  border-bottom-color: var(--vlt-primary-hover);
+}
+
+/* ── Screenshot Container ─────────────────────────────────────────── */
+.screenshot-container {
+  margin: 56px 0 72px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cw-screenshot {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+/* ── Highlights Section ───────────────────────────────────────────── */
+.highlights-section {
+  margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid var(--vlt-rule);
+}
+
+.highlights-heading {
+  margin: 0 0 32px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: left;
+  color: var(--vlt-text);
+}
+
+.highlights-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.highlights-list li {
+  margin-bottom: 20px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--vlt-text);
+  text-align: left;
+  padding-left: 0;
+}
+
+.highlights-list li::before {
+  content: '•';
+  color: var(--vlt-primary);
+  font-weight: 600;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+}
+
+.highlights-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cw-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 32px;
+  }
+
+  .subheading {
+    margin-bottom: 32px;
+    font-size: 20px;
+  }
+
+  .logo-container {
+    margin-bottom: 48px;
+  }
+
+  .cw-logo {
+    max-height: 160px;
+  }
+
+  .text-section {
+    margin-bottom: 32px;
+  }
+
+  .text-section p {
+    font-size: 16px;
+  }
+
+  .screenshot-container {
+    margin: 48px 0 56px;
+  }
+
+  .highlights-section {
+    margin-top: 48px;
+    padding-top: 32px;
+  }
+
+  .highlights-heading {
+    margin-bottom: 24px;
+    font-size: 20px;
+  }
+
+  .highlights-list li {
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cw-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
+
+  .subheading {
+    margin-bottom: 24px;
+    font-size: 18px;
+  }
+
+  .logo-container {
+    margin-bottom: 36px;
+  }
+
+  .cw-logo {
+    max-height: 140px;
+  }
+
+  .text-section {
+    margin-bottom: 24px;
+  }
+
+  .text-section p {
+    font-size: 15px;
+  }
+
+  .screenshot-container {
+    margin: 36px 0 40px;
+  }
+
+  .highlights-section {
+    margin-top: 40px;
+    padding-top: 28px;
+  }
+
+  .highlights-heading {
+    margin-bottom: 20px;
+    font-size: 18px;
+  }
+
+  .highlights-list li {
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+}
+

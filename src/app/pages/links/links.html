@@ -1,0 +1,30 @@
+<section class="links-section">
+  <div class="vlt-container">
+    <!-- Seitentitel -->
+    <h1>Links</h1>
+
+    <!-- Link Categories -->
+    @for (category of categories; track category.name) {
+      <div class="link-category">
+        <h2 class="category-heading">{{ category.name }}</h2>
+        <ul class="links-list">
+          @for (link of category.links; track link.title) {
+            <li>
+              @if (link.url !== '#') {
+                <a [href]="link.url" target="_blank" rel="noopener noreferrer" class="category-link">
+                  {{ link.title }}
+                </a>
+              } @else {
+                <span class="category-link placeholder">{{ link.title }}</span>
+              }
+              @if (link.description) {
+                <div class="link-description">{{ link.description }}</div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+</section>
+

@@ -1,0 +1,173 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.verlag-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.verlag-section .vlt-container {
+  padding-top: 40px;
+  padding-bottom: 88px;
+}
+
+/* ── Breadcrumb Navigation ────────────────────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 56px;
+  font-size: 14px;
+}
+
+.breadcrumb-link {
+  color: var(--vlt-text);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.breadcrumb-link:hover {
+  color: var(--vlt-primary);
+}
+
+.breadcrumb-sep {
+  color: var(--vlt-muted);
+}
+
+.breadcrumb-current {
+  color: var(--vlt-muted);
+}
+
+/* ── Hauptüberschrift ─────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 40px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+  max-width: 900px;
+}
+
+/* ── Einleitungstext ──────────────────────────────────────────────── */
+.intro-text {
+  margin: 0 0 72px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--vlt-text);
+  max-width: 900px;
+  text-align: left;
+}
+
+/* ── Publisher Logo Gallery ───────────────────────────────────────── */
+.publisher-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  max-width: 1000px;
+}
+
+.publisher-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.publisher-logo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--vlt-card);
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.logo-image {
+  max-width: 90%;
+  max-height: 90%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .publisher-gallery {
+    gap: 32px;
+  }
+}
+
+@media (max-width: 900px) {
+  .verlag-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 32px;
+  }
+
+  .intro-text {
+    font-size: 16px;
+    margin-bottom: 56px;
+  }
+
+  .breadcrumb {
+    margin-bottom: 40px;
+    font-size: 13px;
+  }
+
+  .publisher-gallery {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+
+  .publisher-logo {
+    aspect-ratio: 3 / 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .verlag-section .vlt-container {
+    padding-top: 32px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
+
+  .intro-text {
+    font-size: 15px;
+    margin-bottom: 40px;
+  }
+
+  .breadcrumb {
+    margin-bottom: 32px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .publisher-gallery {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .publisher-logo {
+    aspect-ratio: 4 / 3;
+  }
+
+  .logo-image {
+    max-width: 65%;
+    max-height: 65%;
+  }
+}
+

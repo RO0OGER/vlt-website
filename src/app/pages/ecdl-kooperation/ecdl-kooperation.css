@@ -1,0 +1,199 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.ecdl-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.ecdl-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+/* ── Seitentitel ──────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 40px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+  max-width: 800px;
+}
+
+/* ── Einleitungstext ──────────────────────────────────────────────── */
+.intro-text {
+  margin: 0 0 56px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--vlt-text);
+  max-width: 850px;
+  text-align: left;
+}
+
+/* ── Logo Bild ────────────────────────────────────────────────────── */
+.logo-container {
+  margin: 56px 0 88px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.logo-image {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 150px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  object-fit: contain;
+}
+
+/* ── Zwischentitel ────────────────────────────────────────────────── */
+h2 {
+  margin: 80px 0 40px;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+  color: var(--vlt-text);
+}
+
+/* ── Content Sections (Textabschnitte) ────────────────────────────── */
+.content-section {
+  margin-bottom: 32px;
+  max-width: 900px;
+}
+
+.content-section p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--vlt-text);
+  text-align: left;
+}
+
+/* ── Kontaktzeile ─────────────────────────────────────────────────── */
+.contact-section {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid var(--vlt-rule);
+  max-width: 900px;
+}
+
+.contact-section p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--vlt-text);
+  text-align: left;
+}
+
+/* Email Link – hervorgehoben in Primary-Farbe */
+.email-link {
+  color: var(--vlt-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.email-link:hover {
+  color: var(--vlt-primary-hover);
+  text-decoration: underline;
+}
+
+/* Telefon Link – anklickbar */
+.phone-link {
+  color: var(--vlt-text);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.phone-link:hover {
+  color: var(--vlt-primary);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ecdl-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 32px;
+  }
+
+  h2 {
+    font-size: 28px;
+    margin-top: 56px;
+    margin-bottom: 32px;
+  }
+
+  .intro-text {
+    font-size: 16px;
+    margin-bottom: 48px;
+  }
+
+  .logo-container {
+    margin: 48px 0 64px;
+  }
+
+  .logo-image {
+    max-height: 120px;
+  }
+
+  .content-section p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ecdl-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 22px;
+    margin-top: 48px;
+    margin-bottom: 24px;
+  }
+
+  .intro-text {
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+
+  .logo-container {
+    margin: 32px 0 48px;
+  }
+
+  .logo-image {
+    max-height: 200px;
+  }
+
+  .content-section {
+    margin-bottom: 24px;
+  }
+
+  .content-section p,
+  .contact-section p {
+    font-size: 15px;
+  }
+
+  .contact-section {
+    margin-top: 48px;
+    padding-top: 32px;
+  }
+}
+

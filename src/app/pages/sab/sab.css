@@ -1,0 +1,134 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.sab-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.sab-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+/* ── Seitentitel ──────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 56px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+/* ── Logo Container ───────────────────────────────────────────────── */
+.logo-container {
+  margin: 0 0 72px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.sab-logo {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 400px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+/* ── Content Section ──────────────────────────────────────────────── */
+.content-section {
+  margin-bottom: 56px;
+  max-width: 900px;
+}
+
+.content-section p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--vlt-text);
+  text-align: left;
+}
+
+/* ── Link Section ─────────────────────────────────────────────────── */
+.link-section {
+  max-width: 900px;
+}
+
+.sab-link {
+  color: var(--vlt-primary);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.sab-link:hover {
+  color: var(--vlt-primary-hover);
+  text-decoration: underline;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sab-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 40px;
+  }
+
+  .logo-container {
+    margin: 0 0 56px;
+  }
+
+  .sab-logo {
+    max-height: 320px;
+  }
+
+  .content-section p {
+    font-size: 16px;
+  }
+
+  .sab-link {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sab-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 32px;
+  }
+
+  .logo-container {
+    margin: 0 0 48px;
+  }
+
+  .sab-logo {
+    max-height: 240px;
+  }
+
+  .content-section {
+    margin-bottom: 40px;
+  }
+
+  .content-section p {
+    font-size: 15px;
+  }
+
+  .sab-link {
+    font-size: 14px;
+  }
+}
+

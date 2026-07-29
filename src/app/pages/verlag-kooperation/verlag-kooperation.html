@@ -1,0 +1,35 @@
+<section class="verlag-section">
+  <div class="vlt-container">
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb">
+      <a href="/" class="breadcrumb-link">Start</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="/" class="breadcrumb-link">Engagements</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Kooperation mit Verlagen</span>
+    </div>
+
+    <!-- Hauptüberschrift -->
+    <h1>Kooperation mit Verlagen</h1>
+
+    <!-- Einleitungstext -->
+    <p class="intro-text">
+      Der Verband Lehrende IKA steht im regen Austausch mit Buchverlagen, die
+      Lehrbücher zum IKA-Unterricht anbieten. Die Verlage unterstützen einige
+      unserer Anlässe und sind an der jährlich stattfindenden Kadervernetzung
+      mit einem Stand präsent, an dem sie ihr jeweils aktuelles Angebot zeigen.
+    </p>
+
+    <!-- Publisher Logo Gallery -->
+    <div class="publisher-gallery">
+      @for (pub of publishers; track pub.name) {
+        <div class="publisher-card">
+          <div class="publisher-logo">
+            <img [src]="pub.image" [alt]="pub.name + ' Logo'" class="logo-image" />
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+

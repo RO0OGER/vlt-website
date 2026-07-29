@@ -68,13 +68,66 @@ export const routes: Routes = [
       import('./pages/contact/contact').then((m) => m.Contact),
     title: 'Kontakt – Verband',
   },
-
-  // Platzhalter fuer die spaetere CMS-Erweiterung (dynamische Seiten):
-  // {
-  //   path: ':slug',
-  //   loadComponent: () => import('./pages/cms-page/cms-page').then((m) => m.CmsPage),
-  // },
-
+  {
+    path: 'ecdl-kooperation',
+    loadComponent: () =>
+      import('./pages/ecdl-kooperation/ecdl-kooperation').then((m) => m.EcdlKooperation),
+    title: 'ECDL-Kooperation – Verband',
+  },
+  {
+    path: 'verlag-kooperation',
+    loadComponent: () =>
+      import('./pages/verlag-kooperation/verlag-kooperation').then((m) => m.VerlangKooperation),
+    title: 'Kooperation mit Verlagen – Verband',
+  },
+  {
+    path: 'sab',
+    loadComponent: () =>
+      import('./pages/sab/sab').then((m) => m.Sab),
+    title: 'SAB – Verband',
+  },
+  {
+    path: 'bivo-2022',
+    loadComponent: () =>
+      import('./pages/bivo-2022/bivo-2022').then((m) => m.Bivo2022),
+    title: 'BIVO 2022 – Verband',
+  },
+  {
+    path: 'qv-pruefungen',
+    loadComponent: () =>
+      import('./pages/qv-pruefungen/qv-pruefungen').then((m) => m.QvPruefungen),
+    title: 'QV-Prüfungen – Verband',
+  },
+  {
+    path: 'lehrplan-21',
+    loadComponent: () =>
+      import('./pages/lehrplan-21/lehrplan-21').then((m) => m.Lehrplan21),
+    title: 'Lehrplan 21 – Verband',
+  },
+  {
+    path: 'corporate-wording',
+    loadComponent: () =>
+      import('./pages/corporate-wording/corporate-wording').then((m) => m.CorporateWording),
+    title: 'Corporate Wording® – Verband',
+  },
+  {
+    path: 'ausbildung',
+    loadComponent: () =>
+      import('./pages/ausbildung/ausbildung').then((m) => m.Ausbildung),
+    title: 'Ausbildung – Verband',
+  },
+  {
+    path: 'links',
+    loadComponent: () =>
+      import('./pages/links/links').then((m) => m.Links),
+    title: 'Links – Verband',
+  },
+  {
+    path: 'teilnehmerkosten',
+    loadComponent: () =>
+      import('./pages/teilnehmerkosten/teilnehmerkosten').then((m) => m.Teilnehmerkosten),
+    title: 'Teilnehmerkosten – Verband',
+  },
   {
     path: '**',
     loadComponent: () =>

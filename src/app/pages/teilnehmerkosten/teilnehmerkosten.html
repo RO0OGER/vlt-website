@@ -1,0 +1,61 @@
+<section class="kosten-section">
+  <div class="vlt-container">
+    <!-- Hauptüberschrift -->
+    <h1>Teilnehmerkosten für unsere Veranstaltungen</h1>
+
+    <!-- Einleitungstext -->
+    <div class="text-section">
+      <p>
+        Der Verband Lehrende IKA ist bestrebt, seinen Mitgliedern aktuelle und
+        qualitativ hochstehende Weiterbildungsveranstaltungen anzubieten. Diese
+        dürfen auch IKA-Lehrpersonen besuchen, die nicht Mitglied im Verband
+        sind, oder auch Personen, die gar nicht das Fach IKA unterrichten.
+      </p>
+    </div>
+
+    <!-- Zweiter Textabschnitt -->
+    <div class="text-section">
+      <p>
+        Wir wollen unsere Kurse zu fairen Preisen anbieten und diejenigen
+        belohnen, die sich unserem Verband angeschlossen haben, sei es als
+        Einzelmitglied oder dadurch, dass ihre Schule Mitglied ist.
+      </p>
+    </div>
+
+    <!-- Dritter Textabschnitt -->
+    <div class="text-section">
+      <p>
+        Ab dem Schuljahr 2017/2018 gelten deshalb folgende Preise, wobei bei
+        allen Veranstaltungen das Mittagessen enthalten ist.
+      </p>
+    </div>
+
+    <!-- Preistabelle -->
+    <div class="table-wrapper">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th>Veranstaltung</th>
+            <th>Weder Schule noch Teilnehmer ist Mitglied</th>
+            <th>Entweder Schule oder Teilnehmer ist Mitglied</th>
+            <th>Sowohl Schule als auch Teilnehmer sind Mitglied</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (price of prices; track price.event) {
+            <tr>
+              <td>{{ price.event }}</td>
+              <td>{{ price.neither }}</td>
+              <td>{{ price.eitherOne }}</td>
+              <td>{{ price.both }}</td>
+            </tr>
+          }
+          <tr class="footer-row">
+            <td colspan="4">Alle Preise inkl. Mittagessen</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+

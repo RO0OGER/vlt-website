@@ -1,0 +1,73 @@
+<section class="bivo-section">
+  <div class="vlt-container">
+    <!-- Seitentitel -->
+    <h1>BIVO 2022</h1>
+
+    <!-- Hauptüberschrift -->
+    <h2 class="main-heading">So bleibt die kaufmännische Grundbildung zukunftstauglich</h2>
+
+    <!-- Quellenangabe -->
+    <p class="source">Quelle SKKAB</p>
+
+    <!-- Einleitungstext -->
+    <div class="intro-section">
+      <p>
+        Die Arbeitswelt verändert sich rasant. Deshalb werden Bildungsverordnung
+        und Bildungsplan der kaufmännischen Grundbildung alle fünf Jahre
+        überprüft und aktualisiert. Das letzte Update erfolgte 2017. Die
+        laufende Analyse zeigt: Die kaufmännische Grundbildung entspricht
+        grundsätzlich den Erfordernissen der Zeit. Optimierungsbedarf besteht
+        jedoch in Einzelfragen und am Übergang von der zweijährigen Grundbildung
+        «Büroassistent/in EBA» zur dreijährigen Grundbildung «Kauffrau/Kaufmann
+        EFZ». Aufgrund der zunehmenden Digitalisierung der Arbeitswelt ist bei
+        der nächsten Überprüfung (voraussichtlich 2022) mit grösseren
+        Anpassungen zu rechnen. Die heutigen Rahmenbedingungen sind aber
+        flexibel genug, um rasch auf neue Entwicklungen reagieren zu können.
+      </p>
+    </div>
+
+    <!-- Downloadbereich -->
+    <div class="downloads-section">
+      <h3 class="downloads-heading">Downloadbereich</h3>
+
+      <div class="downloads-list">
+        @for (doc of downloads; track doc.filename) {
+          <div class="download-card">
+            <div class="download-header">
+              <!-- PDF Icon -->
+              <svg class="pdf-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-8-6z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2" />
+                <line x1="8" y1="17" x2="12" y2="17" stroke="currentColor" stroke-width="2" />
+              </svg>
+
+              <!-- Title and Subtitle -->
+              <div class="download-info">
+                <div class="download-title">{{ doc.title }}</div>
+                <div class="download-subtitle">{{ doc.subtitle }}</div>
+              </div>
+            </div>
+
+            <!-- Download Button -->
+            <a [href]="doc.filename" [download]="doc.filename" class="btn btn-primary download-btn">
+              PDF herunterladen
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Weiterführender Link -->
+    <div class="info-link-section">
+      <a href="#" class="info-link">Weitere Informationen zur BIVO 2022</a>
+    </div>
+  </div>
+</section>
+
