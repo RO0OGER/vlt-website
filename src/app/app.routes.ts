@@ -42,6 +42,18 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'vorstand',
+    loadComponent: () =>
+      import('./pages/vorstand/vorstand').then((m) => m.Vorstand),
+    title: 'Unser Vorstand – Verband',
+  },
+  {
+    path: 'galerie',
+    loadComponent: () =>
+      import('./pages/galerie/galerie').then((m) => m.Galerie),
+    title: 'Bildergalerien – Verband',
+  },
+  {
     path: 'verbandsanlaesse',
     loadComponent: () =>
       import('./pages/verbandsanlaesse/verbandsanlaesse').then(

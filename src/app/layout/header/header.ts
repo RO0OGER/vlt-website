@@ -51,17 +51,17 @@ export class Header {
       desc: 'Anlässe, Galerien und aktuelle Themen aus dem Verbandsleben.',
       children: [
         { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
-        { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe' },
+        { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
         { t: 'Verbandsanlässe', d: 'Jahresversammlung, Tagungen, Treffen', link: '/verbandsanlaesse' },
         { t: 'Digitaler Wandel', d: 'Schwerpunktthema des Verbands' },
-        { t: 'Aktuell', d: 'Neuigkeiten und Mitteilungen' },
+        { t: 'Beiträge', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },
       ],
     },
     {
       label: 'Verband',
       desc: 'Über uns, Kommunikation und Zugang für Mitglieder.',
       children: [
-        { t: 'Unser Vorstand', d: 'Köpfe und Zuständigkeiten' },
+        { t: 'Unser Vorstand', d: 'Köpfe und Zuständigkeiten', link: '/vorstand' },
         { t: 'Pensionierte', d: 'Ehemalige Mitglieder im Netzwerk' },
         { t: 'Newsletter Anmeldung', d: 'Auf dem Laufenden bleiben' },
         { t: 'Newsletter Aktuell', d: 'Die aktuelle Ausgabe' },

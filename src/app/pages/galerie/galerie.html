@@ -1,0 +1,113 @@
+<section class="page">
+  <div class="vlt-container">
+    <p class="vlt-eyebrow">· Bildergalerien</p>
+    <h1>Eindrücke unserer Anlässe.</h1>
+    <p class="lead">
+      Bilder vergangener Tagungen, Treffen und Ausflüge. Wählen Sie ein Album,
+      um durch die Aufnahmen zu blättern.
+    </p>
+
+    <!-- Kategorien kommen aus den Daten, nicht aus dem Template. -->
+    <div class="cats" role="group" aria-label="Nach Kategorie filtern">
+      @for (c of categories; track c) {
+        <button
+          type="button"
+          class="cat"
+          [class.is-active]="category() === c"
+          [attr.aria-pressed]="category() === c"
+          (click)="category.set(c)"
+        >
+          {{ c }}
+        </button>
+      }
+    </div>
+
+    <p class="count" aria-live="polite">{{ countLabel() }}</p>
+
+    @if (filtered().length) {
+      <div class="masonry">
+        @for (a of filtered(); track a.id) {
+          <button type="button" class="card" (click)="open(a)">
+            <!--
+              Solange kein Bild gepflegt ist, haelt die Platzhalterflaeche
+              das Seitenverhaeltnis des spaeteren Bildes frei.
+            -->
+            @if (a.cover.src) {
+              <img
+                class="card-img"
+                [src]="a.cover.src"
+                [alt]="a.cover.alt"
+                [style.aspect-ratio]="1 / a.cover.ratio"
+                loading="lazy"
+              />
+            } @else {
+              <div class="card-img card-img-empty" [style.aspect-ratio]="1 / a.cover.ratio">
+                <span class="card-img-note">[ titelbild ]</span>
+              </div>
+            }
+
+            <span class="card-count" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              {{ a.images.length }}
+            </span>
+
+            <span class="card-body">
+              <span class="card-meta">{{ a.cat }}@if (a.location) { · {{ a.location }} }</span>
+              <span class="card-title">{{ a.title }}</span>
+              <span class="card-excerpt">{{ a.excerpt }}</span>
+              <span class="card-foot">
+                <span class="card-more">Galerie öffnen <span aria-hidden="true">»</span></span>
+                <span class="card-date">{{ a.dateLabel }}</span>
+              </span>
+            </span>
+          </button>
+        }
+      </div>
+    } @else {
+      <p class="empty">Keine Alben in dieser Kategorie.</p>
+    }
+  </div>
+</section>
+
+<!-- ── Lightbox ─────────────────────────────────────────────────── -->
+@if (lightbox(); as lb) {
+  <div
+    class="lb"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="lb.album.title"
+    (click)="close()"
+  >
+    <button type="button" class="lb-close" aria-label="Schließen" (click)="close()">×</button>
+
+    <div class="lb-stage" (click)="$event.stopPropagation()">
+      @if (lb.album.images.length > 1) {
+        <button type="button" class="lb-nav lb-prev" aria-label="Vorheriges Bild" (click)="step(-1)">‹</button>
+      }
+
+      @if (currentImage(); as img) {
+        <figure class="lb-figure">
+          @if (img.src) {
+            <img class="lb-img" [src]="img.src" [alt]="img.alt" />
+          } @else {
+            <div class="lb-img lb-img-empty" [style.aspect-ratio]="1 / img.ratio">
+              <span class="card-img-note">[ bild {{ lb.index + 1 }} ]</span>
+            </div>
+          }
+          <figcaption class="lb-caption">
+            <span class="lb-alt">{{ img.alt }}</span>
+            <span class="lb-counter">{{ lb.index + 1 }} / {{ lb.album.images.length }}</span>
+          </figcaption>
+        </figure>
+      }
+
+      @if (lb.album.images.length > 1) {
+        <button type="button" class="lb-nav lb-next" aria-label="Nächstes Bild" (click)="step(1)">›</button>
+      }
+    </div>
+  </div>
+}
