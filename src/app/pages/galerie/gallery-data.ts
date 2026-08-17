@@ -1,7 +1,7 @@
 /**
  * Datenmodell und Inhalte der Bildergalerien.
  *
- * Wie bei den Beitraegen und Verbandsanlaessen sind die Alben noch fest
+ * Wie bei den Beitraegen sind die Alben noch fest
  * ausprogrammiert, aber so strukturiert, wie eine Datenbank sie spaeter
  * liefern wuerde: keine Inhalte im Template, alles kommt aus diesen Objekten.
  * Die Bildadressen (src) sind heute noch leer – sobald die DB angebunden ist,
@@ -9,7 +9,7 @@
  * die Platzhalterflaeche das Seitenverhaeltnis frei.
  */
 
-import { MONTHS_DE_LONG } from '../verbandsanlaesse/events';
+import { MONTHS_DE_LONG } from '../../shared/dates';
 
 /** Ein einzelnes Bild einer Galerie. */
 export interface GalleryImage {

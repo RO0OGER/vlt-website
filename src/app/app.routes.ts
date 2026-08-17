@@ -29,17 +29,20 @@ export const routes: Routes = [
     title: 'Beiträge – Verband',
   },
   {
-    // Detailseite eines Beitrags. Die ID kommt spaeter aus der API.
-    path: 'beitraege/:id',
+    /*
+     * Detailseite eines Beitrags, adressiert ueber den Slug statt einer
+     * Nummer: /beitraege/rueckblick-pensionierten-treffen. Das ist dieselbe
+     * Adresse wie in WordPress, dadurch bleiben alte Links und Google-Treffer
+     * mit einer einfachen Weiterleitung gueltig.
+     */
+    path: 'beitraege/:slug',
     loadComponent: () =>
       import('./pages/beitraege/beitrag-detail/beitrag-detail').then(
         (m) => m.BeitragDetailPage,
       ),
-    // Titel aus dem Beitrag statt fix, damit Tab und Lesezeichen ihn zeigen.
-    title: (route) =>
-      import('./pages/beitraege/posts').then(
-        (m) => `${m.findPost(route.paramMap.get('id'))?.title ?? 'Beitrag'} – Verband`,
-      ),
+    // Vorlaeufiger Titel. Den echten setzt die Komponente, sobald der
+    // Beitrag geladen ist – vorher ist er schlicht noch nicht bekannt.
+    title: 'Beitrag – Verband',
   },
   {
     path: 'vorstand',
@@ -52,27 +55,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/galerie/galerie').then((m) => m.Galerie),
     title: 'Bildergalerien – Verband',
-  },
-  {
-    path: 'verbandsanlaesse',
-    loadComponent: () =>
-      import('./pages/verbandsanlaesse/verbandsanlaesse').then(
-        (m) => m.Verbandsanlaesse,
-      ),
-    title: 'Verbandsanlässe – Verband',
-  },
-  {
-    // Detailseite eines Anlasses. Die ID kommt spaeter aus dem CMS.
-    path: 'verbandsanlaesse/:id',
-    loadComponent: () =>
-      import('./pages/verbandsanlaesse/event-detail/event-detail').then(
-        (m) => m.EventDetailPage,
-      ),
-    // Titel aus dem Anlass statt fix, damit Tab und Lesezeichen ihn zeigen.
-    title: (route) =>
-      import('./pages/verbandsanlaesse/events').then(
-        (m) => `${m.findEvent(route.paramMap.get('id'))?.t ?? 'Anlass'} – Verband`,
-      ),
   },
   {
     path: 'kontakt',
@@ -127,6 +109,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/ausbildung/ausbildung').then((m) => m.Ausbildung),
     title: 'Ausbildung – Verband',
+  },
+  {
+    path: 'stellen',
+    loadComponent: () =>
+      import('./pages/stellen/stellen').then((m) => m.Stellen),
+    title: 'Stellen – Verband',
   },
   {
     path: 'links',

@@ -41,3 +41,23 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Zugangsdaten der API. Die Vorlage (config.example.php) bleibt im Repo,
+# die ausgefuellte Datei liegt nur auf dem Server.
+/api/config.php
+
+# Der WordPress-Dump enthaelt Mitgliederdaten und Passwort-Hashes –
+# der gehoert nicht in die Git-Historie.
+/src/app/db-file/
+
+# Erzeugtes SQL aus tools/. Entsteht jederzeit neu, teils mehrere MB.
+# Die gepflegten Dateien (schema.sql, seed-smoke.sql, fix-*.sql) bleiben drin.
+/db/out/
+
+# Bildoriginale aus WordPress: 240 MB, nur als Rueckfallebene aufbewahrt.
+# Ausgeliefert wird die verkleinerte Fassung in public/medien/.
+/media-original/
+
+# Zugangsdaten bleiben in WinSCP; hier steht nur der Sitzungsname.
+# Trotzdem lokal halten, weil Serverpfade nichts im Repo verloren haben.
+/deploy.config.json

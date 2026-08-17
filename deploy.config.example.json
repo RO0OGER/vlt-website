@@ -1,0 +1,16 @@
+{
+  "_hinweis": [
+    "Kopiere diese Datei nach deploy.config.json und passe sie an.",
+    "Hier stehen bewusst KEINE Zugangsdaten: Benutzername, Passwort und",
+    "Hostschluessel liegen in der gespeicherten WinSCP-Sitzung. So kann",
+    "die Datei gefahrlos im Projektordner liegen.",
+    "",
+    "Sitzung anlegen: WinSCP oeffnen, Verbindung zu cyon einrichten,",
+    "testen, dann 'Speichern' mit Passwort. Der vergebene Name kommt",
+    "unten bei 'session' hinein."
+  ],
+
+  "session": "cyon",
+  "remotePath": "/public_html/",
+  "localPath": "dist/vlt-website/"
+}

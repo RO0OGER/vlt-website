@@ -1,0 +1,30 @@
+# Alle Anfragen unterhalb von /api/ gehen an index.php, das sie verteilt.
+# index.php selbst wird durchgelassen, sonst dreht sich die Regel im Kreis.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /api/
+
+  RewriteRule ^index\.php$ - [L]
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+# Zugangsdaten nie ausliefern. Die Umschreibung oben verhindert das bereits,
+# aber falls mod_rewrite einmal fehlt, greift diese Sperre trotzdem.
+<Files "config.php">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</Files>
+
+# Kein Verzeichnislisting, falls die Umschreibung ausfaellt.
+Options -Indexes
+
+# Fehlermeldungen gehoeren ins Log, nicht in die Antwort.
+<IfModule mod_php.c>
+  php_flag display_errors off
+</IfModule>

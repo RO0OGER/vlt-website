@@ -31,7 +31,7 @@
 
     <!-- Kategorien kommen aus den Daten, nicht aus dem Template. -->
     <div class="cats" role="group" aria-label="Nach Kategorie filtern">
-      @for (c of categories; track c) {
+      @for (c of categories(); track c) {
         <button
           type="button"
           class="cat"
@@ -44,12 +44,18 @@
       }
     </div>
 
-    <p class="count" aria-live="polite">{{ countLabel() }}</p>
+    <p class="count" aria-live="polite">
+      @if (loading()) { Beiträge werden geladen… } @else { {{ countLabel() }} }
+    </p>
 
-    @if (filtered().length) {
+    @if (failed()) {
+      <p class="empty">
+        Die Beiträge konnten nicht geladen werden. Bitte laden Sie die Seite neu.
+      </p>
+    } @else if (filtered().length) {
       <div class="masonry">
-        @for (p of filtered(); track p.id) {
-          <a [routerLink]="['/beitraege', p.id]" class="card">
+        @for (p of filtered(); track p.slug) {
+          <a [routerLink]="['/beitraege', p.slug]" class="card">
             <!--
               Solange kein Bild gepflegt ist, haelt die Platzhalterflaeche
               das Seitenverhaeltnis des spaeteren Bildes frei.

@@ -6,6 +6,10 @@
   RewriteEngine On
   RewriteBase /
 
+  # Die API regelt ihr Routing selbst (api/.htaccess). Ohne diese Zeile
+  # landet /api/posts beim SPA-Fallback unten, weil es keine echte Datei ist.
+  RewriteRule ^api(/|$) - [L]
+
   # Vorhandene Dateien und Verzeichnisse direkt ausliefern
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

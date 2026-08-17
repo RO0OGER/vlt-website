@@ -1,0 +1,40 @@
+<section class="stellen-section">
+  <div class="vlt-container">
+    <!-- Seitentitel -->
+    <h1>Stellen</h1>
+
+    <!-- Einleitung -->
+    <p class="intro">
+      Offene Stellen im kaufmännischen und technischen Schulwesen. Die
+      Ausschreibungen werden über guidle bereitgestellt und laufend aktualisiert.
+    </p>
+
+    <!-- guidle-Microsite. Die Adresse setzt das Container-Modul aus data-src
+         zusammen, die Hoehe passt es danach per postMessage an. -->
+    <div class="guidle-embed">
+      <iframe
+        name="guidle_iframe-r33pYk"
+        id="guidle_iframe-r33pYk"
+        data-src="https://microsite.guidle.com/de/mr_r33pYk"
+        title="Stellenangebote"
+        allowtransparency="yes"
+        frameborder="0"
+        scrolling="no"
+        height="400"
+        style="width: 1px; min-width: 100%"
+      ></iframe>
+    </div>
+
+    @if (failed()) {
+      <p class="embed-fallback">
+        Die Stellenangebote konnten nicht geladen werden.
+        <a
+          href="https://microsite.guidle.com/de/mr_r33pYk"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Stellenangebote direkt bei guidle ansehen</a
+        >
+      </p>
+    }
+  </div>
+</section>
