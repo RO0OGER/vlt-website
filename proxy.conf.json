@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "https://verband-technologie.ch",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

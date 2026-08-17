@@ -42,17 +42,16 @@ export class Header {
       children: [
         { t: 'Ausbildung', d: 'Grundbildung und Lehrgänge', link: '/ausbildung' },
         { t: 'externe Weiterbildung / Kurse', d: 'Angebote unserer Partner' },
-        { t: 'Stellen', d: 'Offene Positionen im Schulwesen' },
+        { t: 'Stellen', d: 'Offene Positionen im Schulwesen', link: '/stellen' },
         { t: 'Links', d: 'Nützliche Ressourcen und Verweise', link: '/links' },
       ],
     },
     {
       label: 'Verband organisiert',
-      desc: 'Anlässe, Galerien und aktuelle Themen aus dem Verbandsleben.',
+      desc: 'Galerien und aktuelle Themen aus dem Verbandsleben.',
       children: [
         { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
         { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
-        { t: 'Verbandsanlässe', d: 'Jahresversammlung, Tagungen, Treffen', link: '/verbandsanlaesse' },
         { t: 'Digitaler Wandel', d: 'Schwerpunktthema des Verbands' },
         { t: 'Beiträge', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },
       ],

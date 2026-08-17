@@ -1,0 +1,31 @@
+# ============================================================
+#  WordPress-Routing wiederherstellen
+# ============================================================
+#
+#  Diese Datei als  public_html/.htaccess  hochladen (Punkt am
+#  Anfang, ohne die Endung .htaccess-Umbenennung vergessen).
+#  Sie ersetzt die Angular-Regel, die den Deploy hinterlassen
+#  hat, durch die Standardregeln von WordPress.
+#
+#  DirectoryIndex steht bewusst vorne: im Wurzelverzeichnis
+#  liegt seit dem Deploy auch eine index.html. Ohne diese Zeile
+#  koennte Apache sie der index.php von WordPress vorziehen.
+# ============================================================
+
+DirectoryIndex index.php index.html
+
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+
+# Der Ordner api/ ist ein echtes Verzeichnis und faellt damit schon
+# unter die Bedingung !-d oben – er wird durchgereicht und regelt
+# sein Routing weiterhin selbst ueber api/.htaccess.

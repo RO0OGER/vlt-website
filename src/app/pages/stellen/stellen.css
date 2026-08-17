@@ -1,0 +1,105 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.stellen-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.stellen-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+  max-width: 900px;
+}
+
+/* ── Seitentitel ──────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 32px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+/* ── Einleitung ───────────────────────────────────────────────────── */
+.intro {
+  margin: 0 0 48px;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--vlt-muted);
+  max-width: 70ch;
+}
+
+/* ── guidle-Einbettung ────────────────────────────────────────────── */
+/* Das IFrame bringt Breite und Hoehe selbst mit (inline bzw. per
+   postMessage). Hier steht nur, was es umgibt. */
+.guidle-embed {
+  border-top: 1px solid var(--vlt-rule);
+  padding-top: 32px;
+}
+
+.guidle-embed iframe {
+  display: block;
+  border: 0;
+}
+
+/* ── Ersatzlink, wenn das Widget nicht laedt ──────────────────────── */
+.embed-fallback {
+  margin: 24px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vlt-muted);
+}
+
+.embed-fallback a {
+  color: var(--vlt-primary-hover);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid var(--vlt-primary-hover);
+}
+
+.embed-fallback a:hover {
+  color: var(--vlt-text);
+  border-bottom-color: var(--vlt-text);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .stellen-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 24px;
+  }
+
+  .intro {
+    margin-bottom: 36px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stellen-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .intro {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .guidle-embed {
+    padding-top: 24px;
+  }
+}

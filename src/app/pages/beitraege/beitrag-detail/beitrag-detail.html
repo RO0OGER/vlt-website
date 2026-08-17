@@ -1,4 +1,11 @@
-@if (post(); as p) {
+@if (loading()) {
+  <section class="page">
+    <div class="vlt-container">
+      <p class="vlt-eyebrow">· Beiträge</p>
+      <p class="not-found-text" aria-live="polite">Beitrag wird geladen…</p>
+    </div>
+  </section>
+} @else if (post(); as p) {
   <article class="page">
     <div class="vlt-container">
       <!-- ── Brotkrumen ───────────────────────────────────────── -->

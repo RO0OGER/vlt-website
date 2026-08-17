@@ -1,9 +1,11 @@
-import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 
-import { PostSection, findPost, formatPostDate } from '../posts';
+import { ContentApi } from '../../../shared/content-api';
+import { PostView, ViewImage, toPostView } from '../../../shared/post-view';
 
 @Component({
   selector: 'app-beitrag-detail',
@@ -13,33 +15,54 @@ import { PostSection, findPost, formatPostDate } from '../posts';
 })
 export class BeitragDetailPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(ContentApi);
+  private readonly title = inject(Title);
 
-  private readonly id = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get('id'))),
-    { initialValue: null },
-  );
+  readonly post = signal<PostView | null>(null);
+  readonly loading = signal(true);
 
-  readonly post = computed(() => findPost(this.id()));
+  constructor() {
+    /*
+     * Auf Adresswechsel hoeren statt nur einmal zu lesen: wer von einem
+     * Beitrag zum naechsten springt, bleibt auf derselben Komponente – ohne
+     * switchMap bliebe der alte Inhalt stehen. switchMap bricht ausserdem
+     * eine noch laufende Anfrage ab, wenn schon die naechste ansteht.
+     */
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('slug')),
+        tap(() => {
+          this.loading.set(true);
+          this.post.set(null);
+        }),
+        // Ein Fehler (auch 404) wird zu null – die Vorlage zeigt dann
+        // "nicht gefunden". Ohne catchError wuerde der Datenstrom enden
+        // und ein spaeterer Wechsel des Beitrags nichts mehr laden.
+        switchMap((slug) => (slug ? this.api.post(slug).pipe(catchError(() => of(null))) : of(null))),
+        takeUntilDestroyed(),
+      )
+      .subscribe((data) => {
+        const view = data ? toPostView(data) : null;
+        this.post.set(view);
+        // Titel erst hier setzen: beim Routing steht er noch nicht fest.
+        if (view) this.title.setTitle(`${view.title} – Verband`);
+        this.loading.set(false);
+      });
+  }
 
-  /** Alle Kategorien fuer die Kopfzeile: die der Galerie zuerst. */
-  readonly categories = computed<string[]>(() => {
-    const p = this.post();
-    return p ? [p.cat, ...(p.categories ?? [])] : [];
-  });
+  /** Alle Kategorien fuer die Kopfzeile: die Hauptkategorie zuerst. */
+  readonly categories = computed<string[]>(() => this.post()?.categories ?? []);
 
-  readonly dateLabel = computed(() => {
-    const p = this.post();
-    return p ? formatPostDate(p.date) : '';
-  });
+  readonly dateLabel = computed(() => this.post()?.dateLabel ?? '');
 
   /**
    * Ist der Beitrag noch nicht ausgeschrieben, steht wenigstens der
    * Anrisstext da – eine Detailseite ohne Inhalt waere eine Sackgasse.
    */
-  readonly sections = computed<PostSection[]>(() => {
+  readonly sections = computed(() => {
     const p = this.post();
     if (!p) return [];
-    return p.sections?.length ? p.sections : [{ text: p.excerpt }];
+    return p.sections.length ? p.sections : [{ text: p.excerpt, images: [] }];
   });
 
   /** Initialen fuer das Autorenzeichen, z. B. "Sandra Meier" → "SM". */
@@ -52,7 +75,7 @@ export class BeitragDetailPage {
   }
 
   /** Das Layout kennt eine und zwei Bilder – mehr zeigt die Seite nicht. */
-  images(section: PostSection): PostSection['images'] {
-    return (section.images ?? []).slice(0, 2);
+  images(section: { images: ViewImage[] }): ViewImage[] {
+    return section.images.slice(0, 2);
   }
 }
