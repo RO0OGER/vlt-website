@@ -1,0 +1,5 @@
+/* Admin-Routen brauchen kein Padding vom main-Element. */
+main.no-shell {
+  padding: 0;
+  margin: 0;
+}

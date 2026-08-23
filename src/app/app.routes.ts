@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, loginGuard } from './shared/auth.guard';
 
 /**
  * Statische Routen des Verbands-Auftritts.
@@ -127,6 +128,40 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/teilnehmerkosten/teilnehmerkosten').then((m) => m.Teilnehmerkosten),
     title: 'Teilnehmerkosten – Verband',
+  },
+  // ── Admin-Bereich ──────────────────────────────────────────
+  {
+    path: 'admin',
+    children: [
+      {
+        path: 'login',
+        loadComponent: () =>
+          import('./pages/admin/login/login').then((m) => m.Login),
+        title: 'Admin Login – Verband',
+        canActivate: [loginGuard],
+      },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/admin/shell/admin-shell').then((m) => m.AdminShell),
+        canActivate: [authGuard],
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+          {
+            path: 'dashboard',
+            loadComponent: () =>
+              import('./pages/admin/dashboard/dashboard').then((m) => m.Dashboard),
+            title: 'Dashboard – VLT Admin',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    path: 'verbandsanlaesse',
+    loadComponent: () =>
+      import('./pages/verbandsanlaesse/verbandsanlaesse').then((m) => m.Verbandsanlaesse),
+    title: 'Verbandsanlässe – Verband',
   },
   {
     path: '**',

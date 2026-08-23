@@ -1,0 +1,55 @@
+<div class="login-page">
+  <div class="login-card">
+
+    <div class="login-brand">
+      <span class="login-brand-dot"></span>
+      VLT Admin
+    </div>
+
+    <h1 class="login-title">Anmelden</h1>
+    <p class="login-sub">CMS-Zugang für Administratoren</p>
+
+    @if (error()) {
+      <div class="login-error" role="alert">{{ error() }}</div>
+    }
+
+    <form (ngSubmit)="submit()" #f="ngForm" novalidate>
+      <div class="field">
+        <label for="email">E-Mail</label>
+        <input
+          id="email"
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          required
+          autocomplete="username"
+          placeholder="admin@beispiel.ch"
+          [disabled]="loading()"
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Passwort</label>
+        <input
+          id="password"
+          type="password"
+          name="password"
+          [(ngModel)]="password"
+          required
+          autocomplete="current-password"
+          placeholder="••••••••"
+          [disabled]="loading()"
+        />
+      </div>
+
+      <button type="submit" class="login-btn" [disabled]="loading() || !email || !password">
+        @if (loading()) {
+          <span class="spinner"></span> Anmelden…
+        } @else {
+          Anmelden
+        }
+      </button>
+    </form>
+
+  </div>
+</div>

@@ -1,0 +1,58 @@
+<section class="nl-page">
+  <div class="vlt-container">
+    <p class="vlt-eyebrow">· Newsletter</p>
+    <h1>Newsletter abonnieren</h1>
+    <p class="nl-subtitle">Bleiben Sie auf dem Laufenden – wir informieren Sie über Neuigkeiten und Anlässe des Verbands.</p>
+
+    @if (gesendet) {
+      <div class="nl-success">
+        <div class="nl-success-icon">✓</div>
+        <h2>Anmeldung erfolgreich!</h2>
+        <p>Vielen Dank, <strong>{{ vorname }} {{ nachname }}</strong>. Sie erhalten in Kürze eine Bestätigungs-E-Mail an <strong>{{ email }}</strong>.</p>
+      </div>
+    } @else {
+      <form class="nl-form" (ngSubmit)="absenden()" #f="ngForm" novalidate>
+        <div class="nl-row">
+          <div class="nl-field">
+            <label for="vorname">Vorname</label>
+            <input
+              id="vorname"
+              type="text"
+              name="vorname"
+              [(ngModel)]="vorname"
+              required
+              placeholder="z. B. Anna"
+            />
+          </div>
+          <div class="nl-field">
+            <label for="nachname">Nachname</label>
+            <input
+              id="nachname"
+              type="text"
+              name="nachname"
+              [(ngModel)]="nachname"
+              required
+              placeholder="z. B. Muster"
+            />
+          </div>
+        </div>
+
+        <div class="nl-field">
+          <label for="email">E-Mail-Adresse</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            placeholder="z. B. anna.muster@beispiel.ch"
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" [disabled]="f.invalid">
+          Jetzt anmelden »
+        </button>
+      </form>
+    }
+  </div>
+</section>

@@ -1,0 +1,160 @@
+:host {
+  display: block;
+}
+
+/* ── Vollbild-Hintergrund ─────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  background: var(--vlt-nav);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Karte ────────────────────────────────────────────────── */
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 44px 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+/* ── Marke ────────────────────────────────────────────────── */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vlt-muted);
+  margin-bottom: 28px;
+}
+
+.login-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vlt-primary);
+  flex-shrink: 0;
+}
+
+/* ── Titel ────────────────────────────────────────────────── */
+.login-title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vlt-text);
+}
+
+.login-sub {
+  margin: 0 0 28px;
+  font-size: 14px;
+  color: var(--vlt-muted);
+}
+
+/* ── Fehlermeldung ────────────────────────────────────────── */
+.login-error {
+  background: #fff0f0;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #c0392b;
+  margin-bottom: 20px;
+}
+
+/* ── Felder ───────────────────────────────────────────────── */
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vlt-text);
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--vlt-text);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+}
+
+.field input::placeholder {
+  color: #bbb;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--vlt-nav);
+  box-shadow: 0 0 0 3px rgba(47, 47, 127, 0.1);
+}
+
+.field input:disabled {
+  background: var(--vlt-bg);
+  color: var(--vlt-muted);
+}
+
+/* ── Login-Button ─────────────────────────────────────────── */
+.login-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--vlt-nav);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: var(--vlt-nav-deep);
+}
+
+.login-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Lade-Spinner ─────────────────────────────────────────── */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 32px 24px;
+  }
+}

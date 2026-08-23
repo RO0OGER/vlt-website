@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.page {
+  background: #fff;
+  padding: 64px 0 96px;
+}
+
+.page-header {
+  margin-bottom: 40px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--vlt-text);
+}
+
+.page-lead {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--vlt-muted);
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 40px 0 56px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .page-lead {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 26px;
+  }
+}

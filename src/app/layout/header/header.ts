@@ -50,6 +50,7 @@ export class Header {
       label: 'Verband organisiert',
       desc: 'Galerien und aktuelle Themen aus dem Verbandsleben.',
       children: [
+        { t: 'Verbandsanlässe', d: 'Anlässe und Kurse des Verbands', link: '/verbandsanlaesse' },
         { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
         { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
         { t: 'Digitaler Wandel', d: 'Schwerpunktthema des Verbands' },
