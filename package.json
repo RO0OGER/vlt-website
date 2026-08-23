@@ -39,7 +39,7 @@
     "@angular/build": "^22.0.6",
     "@angular/cli": "^22.0.6",
     "@angular/compiler-cli": "^22.0.6",
-    "@types/jasmine": "~5.1.0",
+    "@types/jasmine": "~6.0.0",
     "angular-eslint": "22.1.0",
     "bcryptjs": "^2.4.3",
     "eslint": "^9.39.1",
