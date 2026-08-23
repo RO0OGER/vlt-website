@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.guidle.com)",
+      "WebFetch(domain:onegov.github.io)",
+      "WebFetch(domain:docs.discover.swiss)",
+      "WebFetch(domain:www.stnet.ch)",
+      "WebFetch(domain:microsite.guidle.com)",
+      "WebFetch(domain:verband-technologie.ch)"
+    ]
+  }
+}
