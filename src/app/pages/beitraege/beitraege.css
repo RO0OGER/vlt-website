@@ -202,12 +202,6 @@ h1 {
   color: var(--vlt-primary);
 }
 
-.card-read {
-  font-family: var(--vlt-mono);
-  font-size: 11px;
-  color: var(--vlt-muted);
-}
-
 .empty {
   margin: 0;
   padding: 80px 0;
@@ -313,10 +307,6 @@ h1 {
     margin-top: 2px;
     padding-top: 0;
     border-top: 0;
-  }
-
-  .card-read {
-    font-size: 9px;
   }
 
   .empty {

@@ -1,22 +1,16 @@
 import { Component } from '@angular/core';
-
-interface FooterCol {
-  h: string;
-  links: string[];
-}
+import { RouterLink } from '@angular/router';
+import { NAV } from '../../shared/nav';
 
 @Component({
   selector: 'app-footer',
+  imports: [RouterLink],
   templateUrl: './footer.html',
   styleUrl: './footer.css',
 })
 export class Footer {
-  protected readonly year = new Date().getFullYear();
+  /** Dieselben Ziele wie im Kopf – siehe shared/nav.ts. */
+  readonly nav = NAV;
 
-  readonly columns: FooterCol[] = [
-    { h: 'Engagements', links: ['Kooperation ECDL', 'Kooperation Verlage', 'SAB', 'BIVO 2022', 'Lehrplan 21'] },
-    { h: 'Im Beruf', links: ['Ausbildung', 'Weiterbildung', 'Stellen', 'Links'] },
-    { h: 'Verband', links: ['Unser Vorstand', 'Pensionierte', 'Newsletter', 'Mitgliederbereich'] },
-    { h: 'Kontakt', links: ['Beitritt', 'Austritt', 'Adressmutation', 'Impressum', 'Datenschutz'] },
-  ];
+  protected readonly year = new Date().getFullYear();
 }

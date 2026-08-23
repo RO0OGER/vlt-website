@@ -21,18 +21,22 @@
     <!-- Desktop navigation -->
     <nav class="nav desktop-only" (mouseenter)="cancelLeave()">
       @for (item of nav; track item.label; let i = $index) {
-        <a
-          href="#"
-          class="nav-link"
-          [class.active]="hover() === i"
-          (click)="$event.preventDefault()"
-          (mouseenter)="enter(i)"
-        >
-          {{ item.label }}
-          @if (item.children.length) {
+        @if (item.children.length) {
+          <a
+            href="#"
+            class="nav-link"
+            [class.active]="hover() === i"
+            (click)="$event.preventDefault()"
+            (mouseenter)="enter(i)"
+          >
+            {{ item.label }}
             <span class="chev" [class.open]="hover() === i">»</span>
-          }
-        </a>
+          </a>
+        } @else {
+          <a [routerLink]="item.link" class="nav-link" (mouseenter)="enter(i)">
+            {{ item.label }}
+          </a>
+        }
       }
     </nav>
 
@@ -72,31 +76,16 @@
   >
     <div class="megamenu-clip">
       <div class="vlt-container megamenu-inner">
-        <div class="megamenu-desc">
-          <div class="megamenu-label">· {{ activeItem()?.label }}</div>
-          <p class="megamenu-lead">{{ activeItem()?.desc }}</p>
-          <a href="#" class="megamenu-more" (click)="$event.preventDefault()">Zur Übersicht »</a>
-        </div>
         <ul class="megamenu-grid">
           @for (c of activeItem()?.children ?? []; track c.t) {
             <li>
-              @if (c.link) {
-                <a [routerLink]="c.link" class="megamenu-child" (click)="hover.set(null)">
-                  <div class="megamenu-child-row">
-                    <span class="megamenu-child-title">{{ c.t }}</span>
-                    <span class="megamenu-child-chev">»</span>
-                  </div>
-                  <div class="megamenu-child-desc">{{ c.d }}</div>
-                </a>
-              } @else {
-                <a href="#" class="megamenu-child" (click)="$event.preventDefault()">
-                  <div class="megamenu-child-row">
-                    <span class="megamenu-child-title">{{ c.t }}</span>
-                    <span class="megamenu-child-chev">»</span>
-                  </div>
-                  <div class="megamenu-child-desc">{{ c.d }}</div>
-                </a>
-              }
+              <a [routerLink]="c.link" class="megamenu-child" (click)="hover.set(null)">
+                <div class="megamenu-child-row">
+                  <span class="megamenu-child-title">{{ c.t }}</span>
+                  <span class="megamenu-child-chev">»</span>
+                </div>
+                <div class="megamenu-child-desc">{{ c.d }}</div>
+              </a>
             </li>
           }
         </ul>
@@ -120,21 +109,15 @@
                   <ul>
                     @for (c of item.children; track c.t) {
                       <li>
-                        @if (c.link) {
-                          <a [routerLink]="c.link" (click)="toggleMobile()">
-                            <span>{{ c.t }}</span><span class="chev-dim">»</span>
-                          </a>
-                        } @else {
-                          <a href="#" (click)="$event.preventDefault()">
-                            <span>{{ c.t }}</span><span class="chev-dim">»</span>
-                          </a>
-                        }
+                        <a [routerLink]="c.link" (click)="toggleMobile()">
+                          <span>{{ c.t }}</span><span class="chev-dim">»</span>
+                        </a>
                       </li>
                     }
                   </ul>
                 </div>
               } @else {
-                <a routerLink="/" class="mobile-top mobile-top-link" (click)="toggleMobile()">
+                <a [routerLink]="item.link" class="mobile-top mobile-top-link" (click)="toggleMobile()">
                   <span>{{ item.label }}</span>
                 </a>
               }

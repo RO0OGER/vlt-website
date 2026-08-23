@@ -34,7 +34,6 @@ export interface ApiPost {
   date: string;
   category: string | null;
   categorySlug: string | null;
-  readMinutes: number | null;
   cover: ApiImage | null;
 }
 

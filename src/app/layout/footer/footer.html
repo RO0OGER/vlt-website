@@ -7,25 +7,27 @@
           Kaufmannschaft in der Schweiz.
         </p>
       </div>
-      @for (col of columns; track col.h) {
+
+      @for (item of nav; track item.label) {
         <div class="footer-col">
-          <h4>{{ col.h }}</h4>
-          <ul>
-            @for (l of col.links; track l) {
-              <li><a href="#" (click)="$event.preventDefault()">{{ l }}</a></li>
-            }
-          </ul>
+          @if (item.link) {
+            <h4><a [routerLink]="item.link">{{ item.label }}</a></h4>
+          } @else {
+            <h4>{{ item.label }}</h4>
+          }
+          @if (item.children.length) {
+            <ul>
+              @for (c of item.children; track c.t) {
+                <li><a [routerLink]="c.link">{{ c.t }}</a></li>
+              }
+            </ul>
+          }
         </div>
       }
     </div>
 
     <div class="footer-bottom">
       <div>© vlt {{ year }} · Verband Lehrender Technik</div>
-      <div class="footer-legal">
-        <a href="#" (click)="$event.preventDefault()">Impressum</a>
-        <a href="#" (click)="$event.preventDefault()">Datenschutz</a>
-        <a href="#" (click)="$event.preventDefault()">AGB</a>
-      </div>
     </div>
   </div>
 </footer>

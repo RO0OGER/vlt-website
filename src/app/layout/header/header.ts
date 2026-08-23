@@ -1,18 +1,6 @@
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-
-interface NavChild {
-  t: string;
-  d: string;
-  /** Route des Eintrags. Ohne link bleibt er ein Platzhalter (Seite fehlt noch). */
-  link?: string;
-}
-
-interface NavItem {
-  label: string;
-  desc?: string;
-  children: NavChild[];
-}
+import { NAV } from '../../shared/nav';
 
 @Component({
   selector: 'app-header',
@@ -22,64 +10,7 @@ interface NavItem {
 })
 export class Header {
   /** Top-level navigation with hover mega-menu children. */
-  readonly nav: NavItem[] = [
-    {
-      label: 'Engagements',
-      desc: 'Kooperationen, Projekte und Standards, in denen sich vlt aktiv einbringt.',
-      children: [
-        { t: 'Kooperation mit ECDL', d: 'Digitale Kompetenznachweise', link: '/ecdl-kooperation' },
-        { t: 'Kooperation mit Verlagen', d: 'Lehrmittel und Fachliteratur', link: '/verlag-kooperation' },
-        { t: 'SAB', d: 'Schweizerische Arbeitsgemeinschaft', link: '/sab' },
-        { t: 'BIVO 2022', d: 'Bildungsverordnung Kaufleute', link: '/bivo-2022' },
-        { t: 'QV-Prüfungen', d: 'Qualifikationsverfahren', link: '/qv-pruefungen' },
-        { t: 'Lehrplan 21', d: 'Begleitung der Umsetzung', link: '/lehrplan-21' },
-        { t: 'Corporate Wording', d: 'Sprachliche Standards', link: '/corporate-wording' },
-      ],
-    },
-    {
-      label: 'Im Beruf',
-      desc: 'Alles rund um den Berufsalltag — Ausbildung, Weiterbildung, Stellen und Ressourcen.',
-      children: [
-        { t: 'Ausbildung', d: 'Grundbildung und Lehrgänge', link: '/ausbildung' },
-        { t: 'externe Weiterbildung / Kurse', d: 'Angebote unserer Partner' },
-        { t: 'Stellen', d: 'Offene Positionen im Schulwesen', link: '/stellen' },
-        { t: 'Links', d: 'Nützliche Ressourcen und Verweise', link: '/links' },
-      ],
-    },
-    {
-      label: 'Verband organisiert',
-      desc: 'Galerien und aktuelle Themen aus dem Verbandsleben.',
-      children: [
-        { t: 'Verbandsanlässe', d: 'Anlässe und Kurse des Verbands', link: '/verbandsanlaesse' },
-        { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
-        { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
-        { t: 'Digitaler Wandel', d: 'Schwerpunktthema des Verbands' },
-        { t: 'Beiträge', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },
-      ],
-    },
-    {
-      label: 'Verband',
-      desc: 'Über uns, Kommunikation und Zugang für Mitglieder.',
-      children: [
-        { t: 'Unser Vorstand', d: 'Köpfe und Zuständigkeiten', link: '/vorstand' },
-        { t: 'Pensionierte', d: 'Ehemalige Mitglieder im Netzwerk' },
-        { t: 'Newsletter Anmeldung', d: 'Auf dem Laufenden bleiben' },
-        { t: 'Newsletter Aktuell', d: 'Die aktuelle Ausgabe' },
-        { t: 'Mitgliederbereich – Zugang', d: 'Login für Mitglieder' },
-      ],
-    },
-    {
-      label: 'Kontakt',
-      desc: 'Formulare, Mutationen und administrative Anliegen rund um die Mitgliedschaft.',
-      children: [
-        { t: 'Anmeldung Newsletter', d: 'Auf dem Laufenden bleiben' },
-        { t: 'Beitrittserklärung', d: 'Mitgliedschaft starten' },
-        { t: 'Austrittserklärung', d: 'Mitgliedschaft beenden' },
-        { t: 'Adressmutation Fachvorstand', d: 'Daten für Funktionsträger anpassen' },
-        { t: 'Adressmutation Mitglied', d: 'Eigene Adresse aktualisieren' },
-      ],
-    },
-  ];
+  readonly nav = NAV;
 
   /** Desktop: index of the hovered nav item whose panel is open (null = closed). */
   readonly hover = signal<number | null>(null);

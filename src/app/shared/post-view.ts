@@ -4,7 +4,7 @@ import { formatDateLong } from './dates';
 /**
  * Umformung der API-Antworten in die Form, die die Templates erwarten.
  *
- * Die Vorlagen der Beitragsseiten sind auf feste Felder ausgelegt (cat, read,
+ * Die Vorlagen der Beitragsseiten sind auf feste Felder ausgelegt (cat,
  * cover mit Seitenverhaeltnis). Die API liefert dieselben Angaben, nur anders
  * benannt und teils leer. Diese Datei ist die einzige Stelle, an der beides
  * zusammenkommt – aendert sich die API, wird nur hier angepasst.
@@ -35,8 +35,6 @@ export interface PostCard {
   date: string;
   /** Ausgeschriebenes Datum fuer die Anzeige. */
   dateLabel: string;
-  /** Lesedauer als fertiger Text, z. B. "6 min". */
-  read: string;
   cover: ViewImage;
 }
 
@@ -64,7 +62,6 @@ export function toPostCard(p: ApiPost): PostCard {
     cat: p.category ?? 'Ohne Kategorie',
     date: p.date,
     dateLabel: formatDateLong(p.date),
-    read: p.readMinutes ? `${p.readMinutes} min` : '',
     cover: toViewImage(p.cover, p.title),
   };
 }
