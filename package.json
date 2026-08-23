@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "deploy": "node tools/deploy.mjs"
+    "deploy": "node tools/deploy.mjs",
+    "admin:hash": "node tools/admin-hash.mjs"
   },
   "prettier": {
     "printWidth": 100,
@@ -40,6 +41,7 @@
     "@angular/compiler-cli": "^22.0.6",
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "22.1.0",
+    "bcryptjs": "^2.4.3",
     "eslint": "^9.39.1",
     "eslint-plugin-security": "^4.0.1",
     "jasmine-core": "~5.9.0",

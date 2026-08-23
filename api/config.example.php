@@ -11,9 +11,15 @@
  * in einem Git-Repo bekommt man aus der Historie nur mit grossem Aufwand
  * wieder heraus.
  *
- * Wichtig: lege bei cyon einen eigenen Datenbankbenutzer an, der nur das
- * Recht SELECT hat. Die API liest ausschliesslich. Wird sie je kompromittiert,
- * kann ueber diesen Zugang nichts geaendert oder geloescht werden.
+ * Wichtig: lege bei cyon einen eigenen Datenbankbenutzer an, der auf den
+ * Inhaltstabellen nur SELECT darf. Geschrieben wird einzig beim An- und
+ * Abmelden, dafuer braucht es zusaetzlich:
+ *
+ *   GRANT SELECT                         ON users       TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON user_tokens TO 'db_user'@'localhost';
+ *
+ * Wird die API je kompromittiert, laesst sich ueber diesen Zugang trotzdem
+ * kein Inhalt aendern oder loeschen.
  */
 
 return [

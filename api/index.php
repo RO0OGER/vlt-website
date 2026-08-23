@@ -7,8 +7,10 @@
  * passende Funktion.
  *
  * Grundsaetze:
- *   * Nur GET. Es gibt keine schreibenden Pfade, und der Datenbankbenutzer
- *     hat nur SELECT-Recht. Das ist die kleinste sinnvolle Angriffsflaeche.
+ *   * Lesen geht nur mit GET. Geschrieben wird einzig unter /api/auth/:
+ *     Anmeldung und Abmeldung pflegen die Tabelle user_tokens. Alles andere
+ *     bleibt lesend, der Datenbankbenutzer braucht darueber hinaus keine
+ *     Schreibrechte.
  *   * Alle Werte aus der URL laufen ueber Prepared Statements. Nie wird ein
  *     Parameter in SQL hineinkopiert.
  *   * Fehler werden protokolliert, aber nie im Klartext ausgeliefert. Eine
@@ -479,11 +481,189 @@ function listLinks(PDO $db): void
     send(['data' => array_values($groups)]);
 }
 
+// ── Anmeldung ───────────────────────────────────────────────
+
+/**
+ * Liest den JSON-Rumpf einer Anfrage. Fehlt er oder ist er kaputt, kommt ein
+ * leeres Array zurueck – die einzelnen Felder werden danach ohnehin geprueft.
+ */
+function jsonBody(): array
+{
+    $raw = file_get_contents('php://input');
+    if ($raw === false || $raw === '') {
+        return [];
+    }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+/**
+ * Holt das Anmelde-Token aus der Anfrage.
+ *
+ * Gesucht wird zuerst X-Auth-Token. Der Grund: laeuft PHP als CGI, behaelt
+ * Apache den Authorization-Header fuer sich und reicht ihn nicht an PHP
+ * weiter. Ein eigener Header kommt dagegen immer an – ohne dass an der
+ * .htaccess etwas geaendert werden muss. Authorization wird trotzdem noch
+ * gelesen, falls das Hosting ihn eines Tages doch durchreicht.
+ */
+function bearerToken(): ?string
+{
+    $quellen = [
+        $_SERVER['HTTP_X_AUTH_TOKEN'] ?? null,
+        $_SERVER['HTTP_AUTHORIZATION'] ?? null,
+        $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null,
+    ];
+
+    foreach ($quellen as $wert) {
+        if (!is_string($wert)) {
+            continue;
+        }
+        // Ein vorangestelltes "Bearer " ist erlaubt, aber nicht noetig.
+        $token = strtolower(trim((string) preg_replace('/^Bearer\s+/i', '', trim($wert))));
+
+        // Die Form des Tokens steht fest (64 Hex-Zeichen aus bin2hex). Was
+        // nicht passt, geht gar nicht erst an die Datenbank.
+        if (preg_match('/^[0-9a-f]{64}$/', $token) === 1) {
+            return $token;
+        }
+    }
+
+    return null;
+}
+
+/** Liefert den angemeldeten Benutzer zum mitgeschickten Token oder null. */
+function currentUser(PDO $db): ?array
+{
+    $token = bearerToken();
+    if ($token === null) {
+        return null;
+    }
+
+    // NOW() statt einer Zeit aus PHP: so entscheidet nur eine Uhr darueber,
+    // wann ein Token ablaeuft.
+    $stmt = $db->prepare(
+        'SELECT u.id, u.email
+           FROM user_tokens t
+           JOIN users u ON u.id = t.user_id
+          WHERE t.token = :token AND t.expires_at > NOW()
+          LIMIT 1'
+    );
+    $stmt->execute([':token' => $token]);
+    $row = $stmt->fetch();
+
+    return $row === false ? null : $row;
+}
+
+/** POST /api/auth/login – prueft die Zugangsdaten und gibt ein Token aus. */
+function login(PDO $db): void
+{
+    $body        = jsonBody();
+    $emailRaw    = $body['email'] ?? null;
+    $passwordRaw = $body['password'] ?? null;
+
+    $email    = is_string($emailRaw) ? trim($emailRaw) : '';
+    $password = is_string($passwordRaw) ? $passwordRaw : '';
+
+    if ($email === '' || $password === '') {
+        fail(400, 'E-Mail und Passwort sind nötig.');
+    }
+
+    $stmt = $db->prepare('SELECT id, password_hash FROM users WHERE email = :email LIMIT 1');
+    $stmt->execute([':email' => $email]);
+    $user = $stmt->fetch();
+
+    // Auch ohne Treffer wird ein Hash geprueft. Sonst antwortet die API auf
+    // unbekannte Adressen messbar schneller und verraet so, welche existieren.
+    $hash = $user === false
+        ? '$2y$12$usesomesillystringfor10123456789012345678901234567890'
+        : (string) $user['password_hash'];
+    $ok = password_verify($password, $hash);
+
+    if ($user === false || !$ok) {
+        // Eine gemeinsame Meldung fuer beide Faelle: welcher der beiden Werte
+        // falsch war, geht niemanden etwas an.
+        fail(401, 'E-Mail oder Passwort ist falsch.');
+    }
+
+    $token   = bin2hex(random_bytes(32));
+    $expires = (string) $db->query('SELECT DATE_ADD(NOW(), INTERVAL 8 HOUR)')->fetchColumn();
+
+    // Abgelaufene Tokens raeumen wir bei dieser Gelegenheit gleich mit weg.
+    $db->exec('DELETE FROM user_tokens WHERE expires_at < NOW()');
+
+    // Pro Benutzer bleibt genau ein Token gueltig, wie in Migration 002 notiert.
+    $stmt = $db->prepare('DELETE FROM user_tokens WHERE user_id = :uid');
+    $stmt->execute([':uid' => $user['id']]);
+
+    $stmt = $db->prepare(
+        'INSERT INTO user_tokens (user_id, token, expires_at)
+         VALUES (:uid, :token, :expires)'
+    );
+    $stmt->execute([
+        ':uid'     => $user['id'],
+        ':token'   => $token,
+        ':expires' => $expires,
+    ]);
+
+    send(['data' => ['token' => $token, 'expiresAt' => $expires]], 200, 0);
+}
+
+/** GET /api/auth/me – bestaetigt, dass das Token noch gilt. */
+function showMe(PDO $db): void
+{
+    $user = currentUser($db);
+    if ($user === null) {
+        fail(401, 'Nicht angemeldet.');
+    }
+    send(['data' => ['email' => $user['email']]], 200, 0);
+}
+
+/** POST /api/auth/logout – macht das Token ungueltig. */
+function logout(PDO $db): void
+{
+    $token = bearerToken();
+    if ($token !== null) {
+        $stmt = $db->prepare('DELETE FROM user_tokens WHERE token = :token');
+        $stmt->execute([':token' => $token]);
+    }
+    // Auch ohne gueltiges Token ist das Ergebnis dasselbe: der Client ist
+    // abgemeldet. Ein Fehler waere hier nur laestig.
+    send(['data' => ['loggedOut' => true]], 200, 0);
+}
+
+/** Beendet die Anfrage, wenn der Pfad diese Methode nicht kennt. */
+function methodNotAllowed(string $allowed): void
+{
+    header('Allow: ' . $allowed);
+    fail(405, 'Methode nicht erlaubt.');
+}
+
+/** Verteilt die Pfade unterhalb von /api/auth/. */
+function handleAuth(PDO $db, string $method, ?string $action): void
+{
+    switch ($action) {
+        case 'login':
+            $method === 'POST' ? login($db) : methodNotAllowed('POST');
+            break;
+        case 'logout':
+            $method === 'POST' ? logout($db) : methodNotAllowed('POST');
+            break;
+        case 'me':
+            $method === 'GET' ? showMe($db) : methodNotAllowed('GET');
+            break;
+        default:
+            fail(404, 'Nicht gefunden.');
+    }
+}
+
 // ── Router ──────────────────────────────────────────────────
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
-    header('Allow: GET');
-    fail(405, 'Nur GET wird unterstützt.');
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+// Gelesen wird mit GET, angemeldet mit POST. Mehr Methoden gibt es nicht.
+if ($method !== 'GET' && $method !== 'POST') {
+    header('Allow: GET, POST');
+    fail(405, 'Nur GET und POST werden unterstützt.');
 }
 
 // Pfad hinter /api/ ermitteln, Query-String abschneiden.
@@ -505,7 +685,15 @@ try {
         fail(404, 'Nicht gefunden.');
     }
 
+    // Ausserhalb der Anmeldung bleibt es beim reinen Lesen.
+    if ($resource !== 'auth' && $method !== 'GET') {
+        methodNotAllowed('GET');
+    }
+
     switch ($resource) {
+        case 'auth':
+            handleAuth($db, $method, $item);
+            break;
         case 'posts':
             $item === null ? listPosts($db, $base) : showPost($db, $item, $base);
             break;

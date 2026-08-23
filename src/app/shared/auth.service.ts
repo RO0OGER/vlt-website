@@ -23,8 +23,13 @@ export class AuthService {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
+  /**
+   * Eigener Header statt Authorization: laeuft PHP auf dem Server als CGI,
+   * reicht Apache den Authorization-Header nicht an PHP durch. Ein X-Header
+   * kommt dagegen zuverlaessig an.
+   */
   private authHeaders(): HttpHeaders {
-    return new HttpHeaders({ Authorization: `Bearer ${this.getToken()}` });
+    return new HttpHeaders({ 'X-Auth-Token': this.getToken() ?? '' });
   }
 
   login(email: string, password: string) {
