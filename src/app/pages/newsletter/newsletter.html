@@ -1,0 +1,97 @@
+<section class="newsletter-section">
+  <div class="vlt-container">
+    <!-- Hauptüberschrift -->
+    <h1>Newsletter Anmeldung</h1>
+
+    @if (done()) {
+      <!-- Bestätigung nach dem Absenden -->
+      <div class="newsletter-done" role="status">
+        <h2>Danke für Ihre Anmeldung!</h2>
+        <p>
+          Wir haben Ihre Angaben erhalten. Sie erhalten unseren Newsletter
+          künftig an die angegebene Adresse.
+        </p>
+        <button type="button" class="btn btn-primary btn-lg" (click)="reset()">
+          Weitere Person anmelden
+        </button>
+      </div>
+    } @else {
+      <!-- Einleitung -->
+      <h2 class="newsletter-lead">Melden Sie sich für unseren Newsletter an:</h2>
+
+      <p class="newsletter-hint">
+        Felder mit einem Stern (<span class="req">*</span>) sind Pflichtfelder.
+      </p>
+
+      @if (error()) {
+        <div class="newsletter-error" role="alert">{{ error() }}</div>
+      }
+
+      <form class="newsletter-form" (ngSubmit)="submit()" #f="ngForm" novalidate>
+        <div class="field">
+          <label for="email">E-Mail-Adresse <span class="req">*</span></label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="name@beispiel.ch"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !emailOk"
+          />
+          @if (submitted() && !emailOk) {
+            <small class="field-error">
+              Bitte geben Sie eine gültige E-Mail-Adresse an.
+            </small>
+          }
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="vorname">Vorname <span class="req">*</span></label>
+            <input
+              id="vorname"
+              type="text"
+              name="vorname"
+              [(ngModel)]="vorname"
+              required
+              autocomplete="given-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !vorname.trim()"
+            />
+            @if (submitted() && !vorname.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Vornamen an.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="nachname">Nachname <span class="req">*</span></label>
+            <input
+              id="nachname"
+              type="text"
+              name="nachname"
+              [(ngModel)]="nachname"
+              required
+              autocomplete="family-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !nachname.trim()"
+            />
+            @if (submitted() && !nachname.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Nachnamen an.</small>
+            }
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg newsletter-submit"
+          [disabled]="loading()"
+        >
+          Abonnieren
+        </button>
+      </form>
+    }
+  </div>
+</section>

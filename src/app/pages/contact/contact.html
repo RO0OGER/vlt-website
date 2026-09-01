@@ -1,2 +1,112 @@
-<h1>Kontakt</h1>
-<p>Kontaktinformationen des Verbands.</p>
+<section class="kontakt-section">
+  <div class="vlt-container">
+    <!-- Hauptüberschrift -->
+    <h1>Kontakt</h1>
+
+    @if (done()) {
+      <!-- Bestätigung nach dem Absenden -->
+      <div class="kontakt-done" role="status">
+        <h2>Ihre Nachricht ist unterwegs.</h2>
+        <p>
+          Besten Dank für Ihre Anfrage. Wir melden uns an der angegebenen
+          E-Mail-Adresse zurück.
+        </p>
+        <button type="button" class="btn btn-primary btn-lg" (click)="reset()">
+          Weitere Nachricht schreiben
+        </button>
+      </div>
+    } @else {
+      <p class="kontakt-lead">
+        Haben Sie eine Frage an den Verband? Schreiben Sie uns.
+      </p>
+
+      <p class="kontakt-hint">
+        Felder mit einem Stern (<span class="req">*</span>) sind Pflichtfelder.
+      </p>
+
+      @if (error()) {
+        <div class="kontakt-error" role="alert">{{ error() }}</div>
+      }
+
+      <form class="kontakt-form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label for="name">Ihr Name <span class="req">*</span></label>
+          <input
+            id="name"
+            type="text"
+            name="name"
+            [(ngModel)]="name"
+            required
+            autocomplete="name"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !name.trim()"
+          />
+          @if (submitted() && !name.trim()) {
+            <small class="field-error">Bitte geben Sie Ihren Namen an.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="email">Ihre E-Mail-Adresse <span class="req">*</span></label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="name@beispiel.ch"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !emailOk"
+          />
+          @if (submitted() && !emailOk) {
+            <small class="field-error">
+              Bitte geben Sie eine gültige E-Mail-Adresse an.
+            </small>
+          } @else {
+            <small class="field-help">An diese Adresse geht unsere Antwort.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="betreff">
+            Betreff <span class="optional">(optional)</span>
+          </label>
+          <input
+            id="betreff"
+            type="text"
+            name="betreff"
+            [(ngModel)]="betreff"
+            [disabled]="loading()"
+          />
+        </div>
+
+        <div class="field">
+          <label for="nachricht">Ihre Nachricht <span class="req">*</span></label>
+          <textarea
+            id="nachricht"
+            name="nachricht"
+            rows="8"
+            [(ngModel)]="nachricht"
+            required
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !nachricht.trim()"
+          ></textarea>
+          @if (submitted() && !nachricht.trim()) {
+            <small class="field-error">
+              Bitte schreiben Sie uns Ihr Anliegen.
+            </small>
+          }
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg kontakt-submit"
+          [disabled]="loading()"
+        >
+          Senden
+        </button>
+      </form>
+    }
+  </div>
+</section>

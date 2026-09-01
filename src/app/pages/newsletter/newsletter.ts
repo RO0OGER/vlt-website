@@ -3,26 +3,27 @@ import { FormsModule } from '@angular/forms';
 
 /**
  * Grobpruefung einer E-Mail-Adresse: etwas, ein @, etwas, ein Punkt, etwas.
- * Faengt Tippfehler ab – sonst schreibt jemand eine Anfrage und die Antwort
- * kommt nie an.
+ * Genauer geht es im Browser nicht sinnvoll – ob die Adresse wirklich
+ * existiert, weiss erst der Server beim Versand. Der Check faengt aber
+ * Tippfehler ab, bevor jemand vergeblich auf Post wartet.
  */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 @Component({
-  selector: 'app-contact',
+  selector: 'app-newsletter',
   standalone: true,
   imports: [FormsModule],
-  templateUrl: './contact.html',
-  styleUrl: './contact.css',
+  templateUrl: './newsletter.html',
+  styleUrl: './newsletter.css',
 })
-export class Contact {
-  name = '';
+export class Newsletter {
   email = '';
-  /* Freiwillig, hilft dem Verband aber beim Sortieren der Anfragen. */
-  betreff = '';
-  nachricht = '';
+  vorname = '';
+  nachname = '';
 
+  /** Laeuft eine Anmeldung? Sperrt das Formular gegen Doppelklicks. */
   readonly loading = signal(false);
+  /** Anmeldung war erfolgreich – dann zeigt die Seite die Bestaetigung. */
   readonly done = signal(false);
   readonly error = signal('');
   /** Erst nach dem ersten Absenden meckern, nicht schon beim Tippen. */
@@ -33,8 +34,7 @@ export class Contact {
   }
 
   get valid(): boolean {
-    // Die Nachricht ist Pflicht: ohne sie ist das Formular sinnlos.
-    return !!(this.name.trim() && this.emailOk && this.nachricht.trim());
+    return this.emailOk && !!this.vorname.trim() && !!this.nachname.trim();
   }
 
   submit(): void {
@@ -50,20 +50,20 @@ export class Contact {
     this.loading.set(true);
 
     /*
-     * Wie bei den anderen Formularen: die API hat dafuer noch keinen
-     * Endpunkt (siehe api/index.php). Die Seite bestaetigt den Versand
-     * vorerst nur im Browser, verschickt wird noch nichts.
+     * Die API hat noch keinen Newsletter-Endpunkt (siehe api/index.php). Bis
+     * der steht, bestaetigt die Seite die Anmeldung nur im Browser – die
+     * Daten werden also noch nirgends gespeichert. Sobald es
+     * POST /api/newsletter gibt, wird der Aufruf hier eingesetzt.
      */
     this.loading.set(false);
     this.done.set(true);
   }
 
-  /** Zurueck zum leeren Formular fuer eine zweite Anfrage. */
+  /** Zurueck zum leeren Formular, um jemand zweiten anzumelden. */
   reset(): void {
-    this.name = '';
     this.email = '';
-    this.betreff = '';
-    this.nachricht = '';
+    this.vorname = '';
+    this.nachname = '';
     this.done.set(false);
     this.submitted.set(false);
     this.error.set('');

@@ -21,7 +21,22 @@
     <!-- Desktop navigation -->
     <nav class="nav desktop-only" (mouseenter)="cancelLeave()">
       @for (item of nav; track item.label; let i = $index) {
-        @if (item.children.length) {
+        @if (item.children.length && item.link) {
+          <!--
+            Punkt mit Menü *und* eigener Seite (z. B. Kontakt): das Überfahren
+            öffnet das Menü, der Klick führt trotzdem direkt auf die Seite.
+          -->
+          <a
+            [routerLink]="item.link"
+            class="nav-link"
+            [class.active]="hover() === i"
+            (mouseenter)="enter(i)"
+            (click)="hover.set(null)"
+          >
+            {{ item.label }}
+            <span class="chev" [class.open]="hover() === i">»</span>
+          </a>
+        } @else if (item.children.length) {
           <a
             href="#"
             class="nav-link"
@@ -49,9 +64,13 @@
         </svg>
         Login
       </a>
-      <button type="button" class="btn btn-primary" (mouseenter)="hover.set(null)">
+      <a
+        routerLink="/beitrittserklaerung"
+        class="btn btn-primary"
+        (mouseenter)="hover.set(null)"
+      >
         Mitglied werden
-      </button>
+      </a>
     </div>
 
     <!-- Mobile burger -->
@@ -126,7 +145,13 @@
         </ul>
         <div class="mobile-actions">
           <a routerLink="/admin/login" class="btn btn-ghost" (click)="toggleMobile()">Login</a>
-          <button type="button" class="btn btn-primary">Mitglied werden »</button>
+          <a
+            routerLink="/beitrittserklaerung"
+            class="btn btn-primary"
+            (click)="toggleMobile()"
+          >
+            Mitglied werden »
+          </a>
         </div>
       </div>
     </div>

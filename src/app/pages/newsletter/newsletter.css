@@ -1,0 +1,196 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.newsletter-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.newsletter-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+  max-width: 760px;
+}
+
+/* ── Überschriften ────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 40px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.newsletter-lead {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.newsletter-hint {
+  margin: 0 0 40px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vlt-muted);
+}
+
+/* Der Stern an den Pflichtfeldern. */
+.req {
+  color: var(--vlt-primary-hover);
+  font-weight: 600;
+}
+
+/* ── Formular ─────────────────────────────────────────────────────── */
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Vor- und Nachname stehen nebeneinander, solange Platz da ist. */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.field label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vlt-text);
+  padding: 0;
+}
+
+.field input {
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--vlt-text);
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 10px;
+  padding: 13px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.field input::placeholder {
+  color: var(--vlt-muted);
+}
+
+.field input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--vlt-nav);
+}
+
+.field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Absenden ─────────────────────────────────────────────────────── */
+.newsletter-submit {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.newsletter-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Fehler & Bestätigung ─────────────────────────────────────────── */
+.newsletter-error {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #fdecec;
+  border: 1px solid #f3c5c5;
+  color: #8c2020;
+  font-size: 15px;
+}
+
+.newsletter-done {
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.newsletter-done h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.newsletter-done p {
+  margin: 0 0 24px;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .newsletter-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .newsletter-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
+
+  .newsletter-lead {
+    font-size: 18px;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .newsletter-submit {
+    align-self: stretch;
+  }
+
+  .newsletter-done {
+    padding: 24px;
+  }
+}
+
+/* ── Fehler am einzelnen Feld ─────────────────────────────────────── */
+.field-error {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8c2020;
+}
+
+/* Rot umrandet, damit das Feld auch ohne Lesen der Meldung auffaellt. */
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
+  border-color: #c25757;
+}

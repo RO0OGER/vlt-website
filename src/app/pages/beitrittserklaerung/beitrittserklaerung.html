@@ -1,0 +1,277 @@
+<section class="beitritt-section">
+  <div class="vlt-container">
+    <!-- Hauptüberschrift -->
+    <h1>Beitrittserklärung</h1>
+    <p class="beitritt-lead">
+      Möchten Sie unseren Verband unterstützen? Werden Sie Mitglied!
+    </p>
+
+    <!-- Beide Beitraege im Überblick. Abschliessen kann dieses Formular
+         aber nur die Einzelmitgliedschaft. -->
+    <p class="vlt-eyebrow beitrag-titel">Mitgliederbeiträge Verband Lehrende IKA</p>
+    <dl class="beitrag-liste">
+      <div class="beitrag-row">
+        <dt>Einzelmitglied</dt>
+        <dd>CHF 60.– <span class="beitrag-takt">jährlich</span></dd>
+      </div>
+      <div class="beitrag-row">
+        <dt>Kollektivmitglied</dt>
+        <dd>CHF 100.– <span class="beitrag-takt">jährlich</span></dd>
+      </div>
+    </dl>
+
+    @if (done()) {
+      <!-- Bestätigung nach dem Absenden -->
+      <div class="beitritt-done" role="status">
+        <h2>Besten Dank für Ihre Anmeldung!</h2>
+        <p>
+          Wir haben Ihre Beitrittserklärung erhalten und melden uns mit dem
+          Kennwort für Ihr Login an Ihrer E-Mail-Adresse.
+        </p>
+      </div>
+    } @else {
+      <p class="beitritt-hint">
+        Felder mit einem Stern (<span class="req">*</span>) sind Pflichtfelder.
+        Dieses Formular gilt für die Einzelmitgliedschaft.
+      </p>
+
+      @if (error()) {
+        <div class="beitritt-error" role="alert">{{ error() }}</div>
+      }
+
+      <form class="beitritt-form" (ngSubmit)="submit()" novalidate>
+        <!-- Art der Mitgliedschaft -->
+        <fieldset class="field radio-field">
+          <legend>Anmeldung als Einzelmitglied <span class="req">*</span></legend>
+          <div class="radio-group">
+            <label class="radio" [class.checked]="art === 'aktiv'">
+              <input
+                type="radio"
+                name="art"
+                value="aktiv"
+                [(ngModel)]="art"
+                [disabled]="loading()"
+              />
+              <span class="radio-dot"></span>
+              <span class="radio-label">Aktivmitglied</span>
+            </label>
+
+            <label class="radio" [class.checked]="art === 'passiv'">
+              <input
+                type="radio"
+                name="art"
+                value="passiv"
+                [(ngModel)]="art"
+                [disabled]="loading()"
+              />
+              <span class="radio-dot"></span>
+              <span class="radio-label">Passivmitglied</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field field-narrow">
+          <label for="anrede">Anrede <span class="req">*</span></label>
+          <select
+            id="anrede"
+            name="anrede"
+            [(ngModel)]="anrede"
+            required
+            [disabled]="loading()"
+          >
+            <option value="" disabled>Bitte wählen</option>
+            @for (a of anreden; track a) {
+              <option [value]="a">{{ a }}</option>
+            }
+          </select>
+          @if (submitted() && !anrede) {
+            <small class="field-error">Bitte wählen Sie eine Anrede.</small>
+          }
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="name">Ihr Name <span class="req">*</span></label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              [(ngModel)]="name"
+              required
+              autocomplete="family-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !name.trim()"
+            />
+            @if (submitted() && !name.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Namen an.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="vorname">Ihr Vorname <span class="req">*</span></label>
+            <input
+              id="vorname"
+              type="text"
+              name="vorname"
+              [(ngModel)]="vorname"
+              required
+              autocomplete="given-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !vorname.trim()"
+            />
+            @if (submitted() && !vorname.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Vornamen an.</small>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="strasse">Strasse und Hausnummer <span class="req">*</span></label>
+          <input
+            id="strasse"
+            type="text"
+            name="strasse"
+            [(ngModel)]="strasse"
+            required
+            autocomplete="street-address"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !strasse.trim()"
+          />
+          @if (submitted() && !strasse.trim()) {
+            <small class="field-error">
+              Bitte geben Sie Strasse und Hausnummer an.
+            </small>
+          }
+        </div>
+
+        <div class="field-row field-row-plz">
+          <div class="field">
+            <label for="plz">PLZ <span class="req">*</span></label>
+            <input
+              id="plz"
+              type="text"
+              name="plz"
+              inputmode="numeric"
+              [(ngModel)]="plz"
+              required
+              autocomplete="postal-code"
+              maxlength="4"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !plzOk"
+            />
+            @if (submitted() && !plzOk) {
+              <small class="field-error">Vier Ziffern, z.&nbsp;B. 8400.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="ort">Ort <span class="req">*</span></label>
+            <input
+              id="ort"
+              type="text"
+              name="ort"
+              [(ngModel)]="ort"
+              required
+              autocomplete="address-level2"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !ort.trim()"
+            />
+            @if (submitted() && !ort.trim()) {
+              <small class="field-error">Bitte geben Sie den Ort an.</small>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="email">Ihre E-Mail-Adresse <span class="req">*</span></label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="name@schule.ch"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !emailOk"
+          />
+          @if (submitted() && !emailOk) {
+            <small class="field-error">
+              Bitte geben Sie eine gültige E-Mail-Adresse an.
+            </small>
+          } @else {
+            <small class="field-help">
+              An diese Adresse geht das Kennwort für Ihr Login.
+            </small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="emailPrivat">
+            Ihre private E-Mail-Adresse <span class="req">*</span>
+          </label>
+          <input
+            id="emailPrivat"
+            type="email"
+            name="emailPrivat"
+            [(ngModel)]="emailPrivat"
+            required
+            autocomplete="email"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !emailPrivatOk"
+          />
+          @if (submitted() && !emailPrivatOk) {
+            <small class="field-error">
+              Bitte geben Sie eine gültige private E-Mail-Adresse an.
+            </small>
+          } @else {
+            <small class="field-help">
+              Bleibt erreichbar, auch wenn die Schuladresse einmal nicht mehr
+              gilt.
+            </small>
+          }
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="geburtsdatum">
+              Ihr Geburtsdatum <span class="optional">(optional)</span>
+            </label>
+            <input
+              id="geburtsdatum"
+              type="date"
+              name="geburtsdatum"
+              [(ngModel)]="geburtsdatum"
+              [disabled]="loading()"
+            />
+          </div>
+
+          <div class="field">
+            <label for="schule">
+              Angestellt bei welcher Schule? <span class="optional">(optional)</span>
+            </label>
+            <input
+              id="schule"
+              type="text"
+              name="schule"
+              [(ngModel)]="schule"
+              [disabled]="loading()"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg beitritt-submit"
+          [disabled]="loading()"
+        >
+          Senden
+        </button>
+
+        <p class="beitritt-note">
+          Mit «Senden» fordern Sie zugleich das Kennwort für das Login an.
+        </p>
+      </form>
+    }
+  </div>
+</section>

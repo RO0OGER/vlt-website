@@ -1,0 +1,206 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.kontakt-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.kontakt-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+  max-width: 760px;
+}
+
+/* ── Kopf ─────────────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 16px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.kontakt-lead {
+  margin: 0 0 12px;
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+.kontakt-hint {
+  margin: 0 0 40px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vlt-muted);
+}
+
+.req {
+  color: var(--vlt-primary-hover);
+  font-weight: 600;
+}
+
+.optional {
+  color: var(--vlt-muted);
+  font-weight: 400;
+}
+
+/* ── Formular ─────────────────────────────────────────────────────── */
+.kontakt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vlt-text);
+}
+
+.field-help {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vlt-muted);
+}
+
+.field input,
+.field textarea {
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--vlt-text);
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 10px;
+  padding: 13px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 180px;
+  line-height: 1.6;
+}
+
+.field input::placeholder {
+  color: var(--vlt-muted);
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--vlt-nav);
+}
+
+.field input:disabled,
+.field textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Absenden ─────────────────────────────────────────────────────── */
+.kontakt-submit {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.kontakt-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Fehler & Bestätigung ─────────────────────────────────────────── */
+.kontakt-error {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #fdecec;
+  border: 1px solid #f3c5c5;
+  color: #8c2020;
+  font-size: 15px;
+}
+
+.kontakt-done {
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.kontakt-done h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.kontakt-done p {
+  margin: 0 0 24px;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+/* ── Fehler am einzelnen Feld ─────────────────────────────────────── */
+.field-error {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8c2020;
+}
+
+/* Rot umrandet, damit das Feld auch ohne Lesen der Meldung auffaellt. */
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+  border-color: #c25757;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .kontakt-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  .kontakt-lead {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 640px) {
+  .kontakt-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .kontakt-hint {
+    margin-bottom: 32px;
+  }
+
+  .field textarea {
+    min-height: 150px;
+  }
+
+  .kontakt-submit {
+    align-self: stretch;
+  }
+
+  .kontakt-done {
+    padding: 24px;
+  }
+}

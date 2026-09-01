@@ -58,12 +58,18 @@ export const NAV: NavItem[] = [
     label: 'Verband',
     children: [
       { t: 'Unser Vorstand', d: 'Personen und Zuständigkeiten', link: '/vorstand' },
+      { t: 'Beitrittserklärung', d: 'Mitglied werden beim Verband', link: '/beitrittserklaerung' },
     ],
   },
   {
-    // Ohne Untereinträge: der Punkt führt direkt auf die Seite.
+    // Der Punkt hat ein Menü und führt zusätzlich direkt auf die Seite –
+    // die Fusszeile verlinkt die Überschrift, der Kopf zeigt das Menü.
     label: 'Kontakt',
     link: '/kontakt',
-    children: [],
+    children: [
+      { t: 'Kontakt', d: 'Adresse und Ansprechpersonen', link: '/kontakt' },
+      { t: 'Newsletter-Anmeldung', d: 'Neuigkeiten per E-Mail erhalten', link: '/newsletter' },
+      { t: 'Austrittserklärung', d: 'Austritt oder Änderung der Mitgliedschaft', link: '/austrittserklaerung' },
+    ],
   },
 ];

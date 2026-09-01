@@ -1,0 +1,344 @@
+:host {
+  display: block;
+}
+
+/* ── Main Section ─────────────────────────────────────────────────── */
+.austritt-section {
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.austritt-section .vlt-container {
+  padding-top: 88px;
+  padding-bottom: 88px;
+  max-width: 760px;
+}
+
+/* ── Kopf ─────────────────────────────────────────────────────────── */
+h1 {
+  margin: 0 0 8px;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.austritt-sub {
+  margin: 0 0 32px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--vlt-muted);
+}
+
+.austritt-intro p {
+  margin: 0 0 20px;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.austritt-intro p:last-child {
+  margin-bottom: 0;
+}
+
+.austritt-rule {
+  border: 0;
+  border-top: 1px solid var(--vlt-rule);
+  margin: 40px 0;
+}
+
+/* ── Hinweise ─────────────────────────────────────────────────────── */
+.austritt-hint {
+  margin: 0 0 32px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vlt-muted);
+}
+
+.req {
+  color: var(--vlt-primary-hover);
+  font-weight: 600;
+}
+
+.optional {
+  color: var(--vlt-muted);
+  font-weight: 400;
+}
+
+/* ── Formular ─────────────────────────────────────────────────────── */
+.austritt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.field-narrow {
+  max-width: 260px;
+}
+
+.field label,
+.radio-field legend {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vlt-text);
+  padding: 0;
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--vlt-text);
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 10px;
+  padding: 13px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.field input::placeholder {
+  color: var(--vlt-muted);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--vlt-nav);
+}
+
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/*
+ * Eigener Pfeil, damit das Dropdown zu den Feldern passt. Und wie die
+ * Auswahlknoepfe steht es 14px unter seiner Beschriftung (8px Abstand des
+ * Feldes + 6px) – Auswahl braucht mehr Luft als ein Textfeld.
+ */
+.field select {
+  margin-top: 6px;
+  appearance: none;
+  cursor: pointer;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%236b6b66' stroke-width='2' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+/* ── Radiobuttons ─────────────────────────────────────────────────── */
+.radio-field {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Die Beschriftung eines fieldset steht ausserhalb des Flex-Flusses – das
+ * `gap` des Feldes greift bei ihr nicht. Die Auswahlknoepfe klebten deshalb
+ * an ihrem Titel; der Abstand muss von Hand kommen.
+ */
+.radio-field legend {
+  margin-bottom: 14px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 8px 28px;
+  flex-wrap: wrap;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 0;
+}
+
+.radio:hover .radio-dot {
+  border-color: var(--vlt-nav);
+}
+
+.radio.checked .radio-label {
+  font-weight: 500;
+}
+
+.radio input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.radio-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--vlt-muted);
+  background: #fff;
+  flex: none;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.15s;
+}
+
+.radio.checked .radio-dot {
+  border-color: var(--vlt-nav);
+  border-width: 2px;
+}
+
+.radio.checked .radio-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vlt-nav);
+}
+
+.radio input:focus-visible + .radio-dot {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: 2px;
+}
+
+/* ── Absenden ─────────────────────────────────────────────────────── */
+.austritt-submit {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.austritt-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Fehler & Bestätigung ─────────────────────────────────────────── */
+.austritt-error {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #fdecec;
+  border: 1px solid #f3c5c5;
+  color: #8c2020;
+  font-size: 15px;
+}
+
+.austritt-done {
+  background: #fafaf8;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.austritt-done h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.austritt-done p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+/* ── Fehler am einzelnen Feld ─────────────────────────────────────── */
+.field-error {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8c2020;
+}
+
+/* Rot umrandet, damit das Feld auch ohne Lesen der Meldung auffaellt. */
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
+  border-color: #c25757;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .austritt-section .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  .austritt-sub {
+    font-size: 19px;
+    margin-bottom: 24px;
+  }
+
+  .austritt-intro p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .austritt-section .vlt-container {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .austritt-sub {
+    font-size: 17px;
+  }
+
+  .austritt-rule {
+    margin: 32px 0;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .field-narrow {
+    max-width: none;
+  }
+
+  .radio-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .austritt-submit {
+    align-self: stretch;
+  }
+
+  .austritt-done {
+    padding: 24px;
+  }
+}

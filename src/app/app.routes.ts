@@ -158,6 +158,28 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'newsletter',
+    loadComponent: () =>
+      import('./pages/newsletter/newsletter').then((m) => m.Newsletter),
+    title: 'Newsletter-Anmeldung – Verband',
+  },
+  {
+    path: 'austrittserklaerung',
+    loadComponent: () =>
+      import('./pages/austrittserklaerung/austrittserklaerung').then(
+        (m) => m.Austrittserklaerung,
+      ),
+    title: 'Austrittserklärung – Verband',
+  },
+  {
+    path: 'beitrittserklaerung',
+    loadComponent: () =>
+      import('./pages/beitrittserklaerung/beitrittserklaerung').then(
+        (m) => m.Beitrittserklaerung,
+      ),
+    title: 'Beitrittserklärung – Verband',
+  },
+  {
     path: 'verbandsanlaesse',
     loadComponent: () =>
       import('./pages/verbandsanlaesse/verbandsanlaesse').then((m) => m.Verbandsanlaesse),

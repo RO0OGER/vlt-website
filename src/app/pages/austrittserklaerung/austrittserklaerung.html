@@ -1,0 +1,183 @@
+<section class="austritt-section">
+  <div class="vlt-container">
+    <!-- Hauptüberschrift -->
+    <h1>Austrittserklärung</h1>
+    <p class="austritt-sub">Änderung Mitgliedschaft</p>
+
+    <div class="austritt-intro">
+      <p>Liebes Verbandsmitglied</p>
+      <p>
+        Wenn Sie dieses Formular ausfüllen wollen, dann haben Sie unseren
+        Verband eine Zeit lang mit Ihrer Mitgliedschaft unterstützt. Dafür
+        vielen herzlichen Dank.
+      </p>
+      <p>
+        Mit dem korrekten Ausfüllen dieses Formulars helfen Sie uns, unsere
+        Adressdatenbank aktuell zu halten und damit auch Kosten zu sparen.
+      </p>
+    </div>
+
+    <hr class="austritt-rule" />
+
+    @if (done()) {
+      <!-- Bestätigung nach dem Absenden -->
+      <div class="austritt-done" role="status">
+        <h2>Ihre Meldung ist erfasst.</h2>
+        <p>
+          Wir haben Ihre Angaben erhalten und passen Ihre Mitgliedschaft
+          entsprechend an. Besten Dank für die Zeit, die Sie unseren Verband
+          unterstützt haben.
+        </p>
+      </div>
+    } @else {
+      <p class="austritt-hint">
+        Für die Online-Austrittserklärung sind die als Pflichtfeld
+        gekennzeichneten Angaben erforderlich. Felder mit einem Stern
+        (<span class="req">*</span>) sind Pflichtfelder.
+      </p>
+
+      @if (error()) {
+        <div class="austritt-error" role="alert">{{ error() }}</div>
+      }
+
+      <form class="austritt-form" (ngSubmit)="submit()" novalidate>
+        <div class="field field-narrow">
+          <label for="anrede">Anrede <span class="req">*</span></label>
+          <select
+            id="anrede"
+            name="anrede"
+            [(ngModel)]="anrede"
+            required
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !anrede"
+          >
+            <option value="" disabled>Bitte wählen</option>
+            @for (a of anreden; track a) {
+              <option [value]="a">{{ a }}</option>
+            }
+          </select>
+          @if (submitted() && !anrede) {
+            <small class="field-error">Bitte wählen Sie eine Anrede.</small>
+          }
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="name">Ihr Name <span class="req">*</span></label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              [(ngModel)]="name"
+              required
+              autocomplete="family-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !name.trim()"
+            />
+            @if (submitted() && !name.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Namen an.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="vorname">Ihr Vorname <span class="req">*</span></label>
+            <input
+              id="vorname"
+              type="text"
+              name="vorname"
+              [(ngModel)]="vorname"
+              required
+              autocomplete="given-name"
+              [disabled]="loading()"
+              [attr.aria-invalid]="submitted() && !vorname.trim()"
+            />
+            @if (submitted() && !vorname.trim()) {
+              <small class="field-error">Bitte geben Sie Ihren Vornamen an.</small>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="email">Ihre E-Mail-Adresse <span class="req">*</span></label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="name@beispiel.ch"
+            [disabled]="loading()"
+            [attr.aria-invalid]="submitted() && !emailOk"
+          />
+          @if (submitted() && !emailOk) {
+            <small class="field-error">
+              Bitte geben Sie eine gültige E-Mail-Adresse an.
+            </small>
+          }
+        </div>
+
+        <!-- Bisheriger Status -->
+        <fieldset class="field radio-field">
+          <legend>Bisheriger Status <span class="req">*</span></legend>
+          <div class="radio-group">
+            @for (s of bisherigeStatus; track s) {
+              <label class="radio" [class.checked]="bisher === s">
+                <input
+                  type="radio"
+                  name="bisher"
+                  [value]="s"
+                  [(ngModel)]="bisher"
+                  [disabled]="loading()"
+                />
+                <span class="radio-dot"></span>
+                <span class="radio-label">{{ s }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <!-- Neuer Status -->
+        <fieldset class="field radio-field">
+          <legend>Neuer Status <span class="req">*</span></legend>
+          <div class="radio-group">
+            @for (s of neueStatus; track s) {
+              <label class="radio" [class.checked]="neu === s">
+                <input
+                  type="radio"
+                  name="neu"
+                  [value]="s"
+                  [(ngModel)]="neu"
+                  [disabled]="loading()"
+                />
+                <span class="radio-dot"></span>
+                <span class="radio-label">{{ s }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="bemerkungen">
+            Bemerkungen <span class="optional">(optional)</span>
+          </label>
+          <textarea
+            id="bemerkungen"
+            name="bemerkungen"
+            rows="5"
+            [(ngModel)]="bemerkungen"
+            [disabled]="loading()"
+          ></textarea>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg austritt-submit"
+          [disabled]="loading()"
+        >
+          Senden
+        </button>
+      </form>
+    }
+  </div>
+</section>
