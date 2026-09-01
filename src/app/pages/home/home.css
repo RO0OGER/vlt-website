@@ -292,7 +292,8 @@
   border: 1px solid var(--vlt-rule);
   border-radius: 16px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Eine Spalte je Verlag: die fuenf Logos stehen in einer Reihe. */
+  grid-template-columns: repeat(5, 1fr);
   overflow: hidden;
 }
 
@@ -301,47 +302,51 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--vlt-muted);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  padding: 24px;
   text-decoration: none;
   border-right: 1px solid var(--vlt-rule);
   border-top: 1px solid var(--vlt-rule);
-  transition: color 0.15s, background 0.15s;
-  position: relative;
+  transition: background 0.15s;
 }
 
 /* remove outer borders to keep a clean framed grid */
-.sponsor:nth-child(4n) {
+.sponsor:nth-child(5n) {
   border-right: none;
 }
-.sponsor:nth-child(-n + 4) {
+.sponsor:nth-child(-n + 5) {
   border-top: none;
 }
 
 .sponsor:hover {
-  color: var(--vlt-text);
   background: #fafaf8;
 }
 
-.sponsor-cap {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-family: var(--vlt-mono);
-  font-size: 10px;
-  color: var(--vlt-muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.7;
+.sponsor-logo {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 1000px) {
+  /* Drei Logos pro Reihe, damit sie nicht zu Briefmarken schrumpfen. */
+  .sponsor-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .sponsor:nth-child(5n) {
+    border-right: 1px solid var(--vlt-rule);
+  }
+  .sponsor:nth-child(3n) {
+    border-right: none;
+  }
+  .sponsor:nth-child(-n + 5) {
+    border-top: 1px solid var(--vlt-rule);
+  }
+  .sponsor:nth-child(-n + 3) {
+    border-top: none;
+  }
   .post-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -391,17 +396,21 @@
   .sponsor-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .sponsor:nth-child(4n) {
+  .sponsor:nth-child(3n) {
     border-right: 1px solid var(--vlt-rule);
   }
   .sponsor:nth-child(2n) {
     border-right: none;
   }
-  .sponsor:nth-child(-n + 4) {
+  .sponsor:nth-child(-n + 3) {
     border-top: 1px solid var(--vlt-rule);
   }
   .sponsor:nth-child(-n + 2) {
     border-top: none;
+  }
+  .sponsor {
+    height: 120px;
+    padding: 20px;
   }
   .hero-copy h1 {
     font-size: 32px;

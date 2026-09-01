@@ -3,11 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { ContentApi } from '../../shared/content-api';
 import { PostCard, toPostCard } from '../../shared/post-view';
-
-interface Sponsor {
-  name: string;
-  mark: string;
-}
+import { PUBLISHERS } from '../../shared/publishers';
 
 @Component({
   selector: 'app-home',
@@ -43,14 +39,9 @@ export class Home {
   /** Alle weiteren – sie fuellen das Raster darunter. */
   readonly rest = computed<PostCard[]>(() => this.posts().slice(1));
 
-  readonly sponsors: Sponsor[] = [
-    { name: 'ECDL Schweiz', mark: 'ECDL' },
-    { name: 'Klett Verlag', mark: 'Klett' },
-    { name: 'Cornelsen', mark: 'C.' },
-    { name: 'Helbling', mark: 'helbling' },
-    { name: 'SAB', mark: 'SAB' },
-    { name: 'hep verlag', mark: 'hep' },
-    { name: 'Compendio', mark: 'Compendio' },
-    { name: 'KV Bildungsgruppe', mark: 'KV' },
-  ];
+  /**
+   * Die Verlage aus der Kooperationsseite. Vorher standen hier Platzhalter
+   * mit erfundenen Namen – gezeigt werden jetzt die echten Partner.
+   */
+  readonly publishers = PUBLISHERS;
 }

@@ -9,8 +9,12 @@
         einen aktiven Austausch unter Kolleg:innen.
       </p>
       <div class="hero-actions">
-        <button type="button" class="btn btn-primary btn-lg">Mitglied werden »</button>
-        <button type="button" class="btn btn-ghost btn-lg">Veranstaltungen ansehen</button>
+        <a routerLink="/beitrittserklaerung" class="btn btn-primary btn-lg">
+          Mitglied werden »
+        </a>
+        <a routerLink="/verbandsanlaesse" class="btn btn-ghost btn-lg">
+          Veranstaltungen ansehen
+        </a>
       </div>
     </div>
     <div class="hero-poster" aria-hidden="true">
@@ -83,14 +87,20 @@
         <p class="vlt-eyebrow">· Sponsoren &amp; Partner</p>
         <h2 class="sponsors-h2">Wir danken unseren Partnern.</h2>
       </div>
-      <a href="#" class="section-link" (click)="$event.preventDefault()">Partner werden »</a>
+      <!-- Wer Partner werden will, meldet sich über das Kontaktformular. -->
+      <a routerLink="/kontakt" class="section-link">Partner werden »</a>
     </div>
 
     <div class="sponsor-grid">
-      @for (s of sponsors; track s.name) {
-        <a href="#" class="sponsor" [title]="s.name" (click)="$event.preventDefault()">
-          <span class="sponsor-mark">{{ s.mark }}</span>
-          <span class="sponsor-cap">[ logo · {{ s.name }} ]</span>
+      @for (p of publishers; track p.name) {
+        <!-- Klick führt auf die Seite, die die Zusammenarbeit erklärt. -->
+        <a routerLink="/verlag-kooperation" class="sponsor" [title]="p.name">
+          <img
+            [src]="p.image"
+            [alt]="p.name + ' Logo'"
+            class="sponsor-logo"
+            loading="lazy"
+          />
         </a>
       }
     </div>
