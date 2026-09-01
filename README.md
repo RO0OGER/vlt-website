@@ -57,3 +57,19 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Demo auf Vercel
+
+Der Auftritt läuft produktiv auf cyon.ch (Apache + PHP). Die Lese-API liegt
+dort unter `/api/` und wird von `api/.htaccess` an `api/index.php` verteilt.
+
+Vercel führt kein PHP aus und ignoriert `.htaccess`. Eine Anfrage an
+`/api/posts` landet dort deshalb beim SPA-Fallback und liefert `index.html`
+mit Status 200 zurück – im Netzwerk-Tab sieht das nach einer erfolgreichen
+Antwort aus, ist aber HTML statt JSON. Angular kann das nicht lesen, die
+Beitrags- und Galerieseiten bleiben leer.
+
+`vercel.json` reicht `/api/...` deshalb serverseitig an die echte Domain
+weiter. Für den Browser bleibt alles dieselbe Herkunft, die API braucht also
+keine CORS-Kopfzeilen. Zieht die API auf eine andere Domain um, wird das Ziel
+dort angepasst.
