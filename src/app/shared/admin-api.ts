@@ -99,6 +99,48 @@ export interface PostPayload {
   blocks: { kind: BlockKind; text: string; imageIds: number[] }[];
 }
 
+/** Ein Album in der Uebersicht. */
+export interface AdminAlbumRow {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
+  location: string | null;
+  status: 'draft' | 'published';
+  category: string | null;
+  imageCount: number;
+  cover: { src: string; alt: string; ratio: number | null } | null;
+}
+
+/** Ein Album mit allem, was der Editor braucht. */
+export interface AdminAlbumDetail {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
+  location: string | null;
+  categoryId: number | null;
+  coverId: number | null;
+  cover: AdminMedia | null;
+  status: 'draft' | 'published';
+  images: AdminMedia[];
+}
+
+/** Was der Album-Editor beim Speichern schickt. */
+export interface AlbumPayload {
+  title: string;
+  excerpt: string;
+  date: string;
+  location: string;
+  status: 'draft' | 'published';
+  categoryId: number | null;
+  /** Null heisst: das erste Bild wird Titelbild. */
+  coverId: number | null;
+  imageIds: number[];
+}
+
 export interface AdminCategory {
   id: number;
   slug: string;
@@ -195,6 +237,39 @@ export class AdminApi {
     return this.unwrap<AdminMedia[]>(
       this.http.get<Envelope<AdminMedia[]>>(`${API}/media`, { headers: this.headers(), params }),
     );
+  }
+
+  /** Alle Alben, Entwuerfe eingeschlossen. */
+  albums(): Observable<AdminAlbumRow[]> {
+    return this.unwrap<AdminAlbumRow[]>(
+      this.http.get<Envelope<AdminAlbumRow[]>>(`${API}/albums`, { headers: this.headers() }),
+    );
+  }
+
+  album(id: number): Observable<AdminAlbumDetail> {
+    return this.unwrap<AdminAlbumDetail>(
+      this.http.get<Envelope<AdminAlbumDetail>>(`${API}/albums/${id}`, { headers: this.headers() }),
+    );
+  }
+
+  createAlbum(payload: AlbumPayload): Observable<{ id: number; slug: string }> {
+    return this.unwrap(
+      this.http.post<Envelope<{ id: number; slug: string }>>(`${API}/albums`, payload, {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  updateAlbum(id: number, payload: AlbumPayload): Observable<{ id: number; slug: string }> {
+    return this.unwrap(
+      this.http.put<Envelope<{ id: number; slug: string }>>(`${API}/albums/${id}`, payload, {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  removeAlbum(id: number): Observable<unknown> {
+    return this.http.delete(`${API}/albums/${id}`, { headers: this.headers() });
   }
 
   /** Legt eine Kategorie an. Die Adresse entsteht aus dem Namen. */

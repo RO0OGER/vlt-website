@@ -1,22 +1,14 @@
-import { Component, HostListener, computed, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 
-import {
-  ALL_ALBUM_CATEGORIES,
-  GalleryAlbum,
-  albumCategories,
-  formatAlbumDate,
-  sortedAlbums,
-} from './gallery-data';
+import { AlbumCard, AlbumView, toAlbumCard, toAlbumView } from '../../shared/album-view';
+import { ContentApi } from '../../shared/content-api';
 
-/** Ein Album, aufbereitet fuer eine Karte der Galerie. */
-interface AlbumCard extends GalleryAlbum {
-  /** Ausgeschriebenes Datum – die Karte formatiert selbst nichts. */
-  dateLabel: string;
-}
+/** Filterwert der Kategorie-Leiste, der alle Alben durchlaesst. */
+const ALL_CATEGORIES = 'Alle';
 
 /** Offener Zustand der Lightbox: welches Album, welches Bild. */
 interface Lightbox {
-  album: AlbumCard;
+  album: AlbumView;
   index: number;
 }
 
@@ -27,20 +19,50 @@ interface Lightbox {
   styleUrl: './galerie.css',
 })
 export class Galerie {
-  readonly allCategories = ALL_ALBUM_CATEGORIES;
+  private readonly api = inject(ContentApi);
 
-  /** Neuste zuerst – die Reihenfolge aendert sich beim Filtern nicht. */
-  private readonly albums: AlbumCard[] = sortedAlbums().map((a) => ({
-    ...a,
-    dateLabel: formatAlbumDate(a.date),
-  }));
+  readonly allCategories = ALL_CATEGORIES;
 
-  readonly categories = albumCategories(this.albums);
-  readonly category = signal(ALL_ALBUM_CATEGORIES);
+  readonly albums = signal<AlbumCard[]>([]);
+  readonly loading = signal(true);
+  readonly failed = signal(false);
+
+  readonly category = signal(ALL_CATEGORIES);
+
+  /** null = Lightbox geschlossen. */
+  readonly lightbox = signal<Lightbox | null>(null);
+  /** Album, dessen Bilder gerade geholt werden. */
+  readonly opening = signal<number | null>(null);
+
+  private readonly lbPanel = viewChild<ElementRef<HTMLElement>>('lbPanel');
+
+  constructor() {
+    // Die geoeffnete Lightbox bekommt den Fokus. Sonst blieben die Pfeiltasten
+    // wirkungslos, bis jemand hineinklickt – und die Tastatur liefe weiter
+    // durch die Seite dahinter.
+    effect(() => this.lbPanel()?.nativeElement.focus());
+
+    this.api.albums().subscribe({
+      next: (albums) => {
+        this.albums.set(albums.map(toAlbumCard));
+        this.loading.set(false);
+      },
+      error: () => {
+        this.failed.set(true);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  /** Kategorien aus den geladenen Alben, nicht fest im Template. */
+  readonly categories = computed(() => [
+    ALL_CATEGORIES,
+    ...[...new Set(this.albums().map((a) => a.cat))].sort((a, b) => a.localeCompare(b, 'de')),
+  ]);
 
   readonly filtered = computed<AlbumCard[]>(() => {
     const cat = this.category();
-    return this.albums.filter((a) => cat === ALL_ALBUM_CATEGORIES || a.cat === cat);
+    return this.albums().filter((a) => cat === ALL_CATEGORIES || a.cat === cat);
   });
 
   /** "1 Album" statt "1 Alben". */
@@ -49,17 +71,33 @@ export class Galerie {
     return `${n} ${n === 1 ? 'Album' : 'Alben'}`;
   });
 
-  /** null = Lightbox geschlossen. */
-  readonly lightbox = signal<Lightbox | null>(null);
-
   /** Das gerade in der Lightbox gezeigte Bild. */
   readonly currentImage = computed(() => {
     const lb = this.lightbox();
     return lb ? lb.album.images.at(lb.index) ?? null : null;
   });
 
-  open(album: AlbumCard, index = 0): void {
-    this.lightbox.set({ album, index });
+  /**
+   * Oeffnet ein Album und holt dafuer seine Bilder nach.
+   *
+   * Die Uebersicht kennt nur Titelbild und Anzahl. Alles auf einmal zu laden
+   * hiesse, bei jedem Seitenaufruf saemtliche Aufnahmen aller Alben zu
+   * holen – fuer etwas, das die meisten Besucher nie oeffnen.
+   */
+  open(album: AlbumCard): void {
+    if (this.opening() !== null) return;
+    this.opening.set(album.id);
+
+    this.api.album(album.slug).subscribe({
+      next: (detail) => {
+        this.opening.set(null);
+        const view = toAlbumView(album, detail);
+        // Ein Album ohne Bilder hat nichts zu zeigen – dann bleibt die
+        // Lightbox zu, statt eine leere Flaeche aufzuziehen.
+        if (view.images.length) this.lightbox.set({ album: view, index: 0 });
+      },
+      error: () => this.opening.set(null),
+    });
   }
 
   close(): void {
@@ -75,10 +113,17 @@ export class Galerie {
     });
   }
 
-  /** Tastatursteuerung, nur wenn die Lightbox offen ist. */
-  @HostListener('document:keydown', ['$event'])
+  /**
+   * Schliesst nur, wenn der Klick die Hintergrundflaeche selbst getroffen
+   * hat. Das ersetzt ein stopPropagation auf dem Bildbereich – ein Klick
+   * aufs Bild blubbert zwar bis hierher, kommt aber nicht von hier.
+   */
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.close();
+  }
+
+  /** Tastatursteuerung der offenen Lightbox. */
   onKeydown(e: KeyboardEvent): void {
-    if (!this.lightbox()) return;
     switch (e.key) {
       case 'Escape':
         this.close();

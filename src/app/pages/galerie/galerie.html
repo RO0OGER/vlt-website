@@ -9,7 +9,7 @@
 
     <!-- Kategorien kommen aus den Daten, nicht aus dem Template. -->
     <div class="cats" role="group" aria-label="Nach Kategorie filtern">
-      @for (c of categories; track c) {
+      @for (c of categories(); track c) {
         <button
           type="button"
           class="cat"
@@ -24,10 +24,23 @@
 
     <p class="count" aria-live="polite">{{ countLabel() }}</p>
 
-    @if (filtered().length) {
+    @if (loading()) {
+      <p class="empty" aria-live="polite">Alben werden geladen …</p>
+    } @else if (failed()) {
+      <p class="empty">Die Alben liessen sich nicht laden. Bitte später erneut versuchen.</p>
+    } @else if (filtered().length) {
       <div class="masonry">
         @for (a of filtered(); track a.id) {
-          <button type="button" class="card" (click)="open(a)">
+          <!-- Beim Öffnen werden die Bilder erst geholt; solange bleiben die
+               übrigen Karten gesperrt, damit nicht zwei Alben gleichzeitig
+               unterwegs sind. -->
+          <button
+            type="button"
+            class="card"
+            [class.is-opening]="opening() === a.id"
+            [disabled]="opening() !== null"
+            (click)="open(a)"
+          >
             <!--
               Solange kein Bild gepflegt ist, haelt die Platzhalterflaeche
               das Seitenverhaeltnis des spaeteren Bildes frei.
@@ -52,7 +65,7 @@
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="M21 15l-5-5L5 21" />
               </svg>
-              {{ a.images.length }}
+              {{ a.imageCount }}
             </span>
 
             <span class="card-body">
@@ -60,31 +73,44 @@
               <span class="card-title">{{ a.title }}</span>
               <span class="card-excerpt">{{ a.excerpt }}</span>
               <span class="card-foot">
-                <span class="card-more">Galerie öffnen <span aria-hidden="true">»</span></span>
+                <span class="card-more">
+                  {{ opening() === a.id ? 'Wird geöffnet …' : 'Galerie öffnen' }}
+                  <span aria-hidden="true">»</span>
+                </span>
                 <span class="card-date">{{ a.dateLabel }}</span>
               </span>
             </span>
           </button>
         }
       </div>
-    } @else {
+    } @else if (albums().length) {
       <p class="empty">Keine Alben in dieser Kategorie.</p>
+    } @else {
+      <p class="empty">Es sind noch keine Bildergalerien veröffentlicht.</p>
     }
   </div>
 </section>
 
 <!-- ── Lightbox ─────────────────────────────────────────────────── -->
 @if (lightbox(); as lb) {
+  <!-- Die Tastatursteuerung haengt am Fenster selbst, nicht am Dokument:
+       sie gehoert zu diesem Dialog und soll nur gelten, solange er offen
+       ist. Darum tabindex und der Fokus beim Oeffnen. -->
   <div
     class="lb"
     role="dialog"
     aria-modal="true"
+    tabindex="-1"
+    #lbPanel
     [attr.aria-label]="lb.album.title"
-    (click)="close()"
+    (click)="onBackdropClick($event)"
+    (keydown)="onKeydown($event)"
   >
     <button type="button" class="lb-close" aria-label="Schließen" (click)="close()">×</button>
 
-    <div class="lb-stage" (click)="$event.stopPropagation()">
+    <!-- Kein stopPropagation noetig: onBackdropClick schliesst nur, wenn
+         der Klick die Hintergrundflaeche selbst getroffen hat. -->
+    <div class="lb-stage">
       @if (lb.album.images.length > 1) {
         <button type="button" class="lb-nav lb-prev" aria-label="Vorheriges Bild" (click)="step(-1)">‹</button>
       }

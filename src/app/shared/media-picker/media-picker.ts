@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AdminApi, AdminMedia, apiErrorText, mediaUsedBy } from '../../../../shared/admin-api';
+import { AdminApi, AdminMedia, apiErrorText, mediaUsedBy } from '../admin-api';
 
 /**
  * Bildauswahl fuer den Block-Editor.

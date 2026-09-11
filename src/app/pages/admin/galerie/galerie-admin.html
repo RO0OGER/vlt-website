@@ -1,0 +1,136 @@
+<div class="page">
+
+  <header class="page-head">
+    <div>
+      <h1>Bildergalerien</h1>
+      <p class="page-sub">Alben mit den Bildern vergangener Anlässe.</p>
+    </div>
+    <a routerLink="/admin/galerie/neu" class="btn-new">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      Neues Album
+    </a>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">
+      {{ error() }}
+      <button type="button" class="alert-retry" (click)="load()">Erneut versuchen</button>
+    </p>
+  }
+
+  <div class="tools">
+    <div class="tabs" role="group" aria-label="Nach Status filtern">
+      <button type="button" [class.active]="status() === 'all'" (click)="setStatus('all')">
+        Alle <span class="count">{{ counts().all }}</span>
+      </button>
+      <button type="button" [class.active]="status() === 'published'" (click)="setStatus('published')">
+        Veröffentlicht <span class="count">{{ counts().published }}</span>
+      </button>
+      <button type="button" [class.active]="status() === 'draft'" (click)="setStatus('draft')">
+        Entwürfe <span class="count">{{ counts().draft }}</span>
+      </button>
+    </div>
+
+    <label class="sr-only" for="album-search">Alben durchsuchen</label>
+    <input
+      id="album-search"
+      type="search"
+      class="search"
+      placeholder="Titel, Ort oder Kategorie …"
+      [(ngModel)]="search"
+      (ngModelChange)="onSearch($event)"
+      autocomplete="off"
+    />
+  </div>
+
+  @if (loading()) {
+    <p class="note" aria-live="polite">Alben werden geladen …</p>
+  } @else if (visible().length === 0) {
+    <div class="empty">
+      @if (albums().length === 0) {
+        <p class="empty-title">Noch keine Alben</p>
+        <p class="empty-text">
+          Legen Sie das erste Album an – es lässt sich zuerst als Entwurf speichern.
+        </p>
+        <a routerLink="/admin/galerie/neu" class="btn-new">Neues Album</a>
+      } @else {
+        <p class="empty-title">Kein Treffer</p>
+        <p class="empty-text">Zu dieser Suche passt kein Album.</p>
+      }
+    </div>
+  } @else {
+    <ul class="list">
+      @for (album of visible(); track album.id) {
+        <li class="row">
+          <div class="row-cover" aria-hidden="true">
+            @if (album.cover?.src; as src) {
+              <img [src]="src" [alt]="" loading="lazy" />
+            } @else {
+              <span class="cover-empty">–</span>
+            }
+          </div>
+
+          <div class="row-main">
+            <a class="row-title" [routerLink]="['/admin/galerie', album.id]">{{ album.title }}</a>
+            <p class="row-meta">
+              <span class="badge" [class.badge-draft]="album.status === 'draft'">
+                {{ album.status === 'published' ? 'Veröffentlicht' : 'Entwurf' }}
+              </span>
+              <time [attr.datetime]="album.date">{{ dateLabel(album.date) }}</time>
+              @if (album.location) {
+                <span aria-hidden="true">·</span>
+                <span>{{ album.location }}</span>
+              }
+              @if (album.category) {
+                <span aria-hidden="true">·</span>
+                <span>{{ album.category }}</span>
+              }
+              <span aria-hidden="true">·</span>
+              <span>{{ imageLabel(album.imageCount) }}</span>
+            </p>
+          </div>
+
+          <div class="row-actions">
+            <a [routerLink]="['/admin/galerie', album.id]" class="action">Bearbeiten</a>
+            @if (album.status === 'published') {
+              <a href="/galerie" target="_blank" rel="noopener" class="action">Ansehen</a>
+            }
+            <button type="button" class="action action-danger" (click)="askDelete(album)">
+              Löschen
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+@if (confirming(); as album) {
+  <div class="backdrop">
+    <div
+      class="confirm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      tabindex="-1"
+      #panel
+      (keydown)="onConfirmKeydown($event)"
+    >
+      <h2 id="confirm-title">Album löschen?</h2>
+      <p>
+        «{{ album.title }}» wird entfernt. Die Bilder selbst bleiben im Bestand und
+        lassen sich weiterverwenden – nur die Zusammenstellung geht verloren.
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-plain" (click)="cancelDelete()" [disabled]="deleting()">
+          Abbrechen
+        </button>
+        <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting()">
+          {{ deleting() ? 'Wird gelöscht …' : 'Endgültig löschen' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

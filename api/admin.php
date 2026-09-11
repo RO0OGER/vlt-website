@@ -643,6 +643,292 @@ function adminDeletePost(PDO $db, int $id): void
     send(['data' => ['deleted' => true]], 200, 0);
 }
 
+// ── Endpunkte: Bildergalerien ───────────────────────────────
+
+/** Wie uniqueSlug(), nur fuer die Tabelle albums. */
+function uniqueAlbumSlug(PDO $db, string $base, ?int $ignoreId): string
+{
+    $base = substr($base, 0, 190);
+    if ($base === '') {
+        $base = 'album';
+    }
+    $stmt = $db->prepare('SELECT 1 FROM albums WHERE slug = :slug AND id <> :id LIMIT 1');
+
+    $slug = $base;
+    for ($n = 2; $n < 200; $n++) {
+        $stmt->execute([':slug' => $slug, ':id' => $ignoreId ?? 0]);
+        if ($stmt->fetchColumn() === false) {
+            return $slug;
+        }
+        $slug = $base . '-' . $n;
+    }
+    invalid('Für diesen Titel lässt sich keine freie Adresse finden.');
+
+    return $base;
+}
+
+/**
+ * Liest die Bildliste eines Albums aus dem Body.
+ *
+ * Dubletten fliegen raus: album_images fuehrt ein Bild je Album nur einmal
+ * (der Schluessel ist album_id + media_id). Zweimal dasselbe Bild waere
+ * beim Speichern ein Fehler statt zweier Kacheln.
+ */
+function albumImagesField(PDO $db, array $body): array
+{
+    $raw = $body['imageIds'] ?? [];
+    if (!is_array($raw)) {
+        invalid('Die Bilder müssen als Liste kommen.');
+    }
+    if (count($raw) > 300) {
+        invalid('Ein Album darf höchstens 300 Bilder haben.');
+    }
+
+    $ids = [];
+    foreach (array_values($raw) as $value) {
+        $mediaId = idField(['id' => $value], 'id');
+        if ($mediaId !== null && !in_array($mediaId, $ids, true)) {
+            $ids[] = requireRow($db, 'media', $mediaId, 'Ein gewähltes Bild');
+        }
+    }
+    return $ids;
+}
+
+/** Baut die geprueften Kopfdaten eines Albums. */
+function albumFields(PDO $db, array $body, ?int $albumId, array $imageIds): array
+{
+    $title  = textField($body, 'title', 255, true);
+    $status = $body['status'] ?? 'draft';
+    if ($status !== 'draft' && $status !== 'published') {
+        invalid('Der Status muss "draft" oder "published" sein.');
+    }
+
+    $location = textField($body, 'location', 160);
+    $cover    = requireRow($db, 'media', idField($body, 'coverId'), 'Das gewählte Titelbild');
+
+    /*
+     * Ohne gewaehltes Titelbild nimmt das Album sein erstes Bild. Eine Karte
+     * in der Galerie ohne Bild sieht nach einem Fehler aus, und "das erste
+     * Bild" ist das, was man ohnehin erwartet.
+     */
+    if ($cover === null && $imageIds !== []) {
+        $cover = $imageIds[0];
+    }
+
+    return [
+        'slug'        => uniqueAlbumSlug($db, slugify($title), $albumId),
+        'title'       => $title,
+        'excerpt'     => textField($body, 'excerpt', 2000),
+        'event_date'  => dateField($body, 'date'),
+        'location'    => $location === '' ? null : $location,
+        'category_id' => requireRow($db, 'categories', idField($body, 'categoryId'), 'Die gewählte Kategorie'),
+        'cover_id'    => $cover,
+        'status'      => $status,
+    ];
+}
+
+/** Schreibt die Bildliste eines Albums neu – wie bei den Beitragsbloecken. */
+function writeAlbumImages(PDO $db, int $albumId, array $imageIds): void
+{
+    $stmt = $db->prepare('DELETE FROM album_images WHERE album_id = :id');
+    $stmt->execute([':id' => $albumId]);
+
+    $insert = $db->prepare(
+        'INSERT INTO album_images (album_id, media_id, position)
+         VALUES (:album, :media, :position)'
+    );
+    foreach ($imageIds as $position => $mediaId) {
+        $insert->execute([':album' => $albumId, ':media' => $mediaId, ':position' => $position]);
+    }
+}
+
+/** GET /api/admin/albums – alle Alben, auch Entwuerfe. */
+function adminListAlbums(PDO $db, string $base): void
+{
+    $rows = $db->query(
+        'SELECT a.id, a.slug, a.title, a.excerpt, a.event_date, a.location, a.status,
+                c.name AS category,
+                m.path, m.alt, m.width, m.height,
+                (SELECT COUNT(*) FROM album_images ai WHERE ai.album_id = a.id) AS image_count
+           FROM albums a
+           LEFT JOIN categories c ON c.id = a.category_id
+           LEFT JOIN media m      ON m.id = a.cover_id
+          ORDER BY a.event_date DESC, a.id DESC'
+    )->fetchAll();
+
+    $data = [];
+    foreach ($rows as $row) {
+        $data[] = [
+            'id'         => (int) $row['id'],
+            'slug'       => $row['slug'],
+            'title'      => $row['title'],
+            'excerpt'    => $row['excerpt'],
+            'date'       => $row['event_date'],
+            'location'   => $row['location'],
+            'status'     => $row['status'],
+            'category'   => $row['category'],
+            'imageCount' => (int) $row['image_count'],
+            'cover'      => mediaObject($row, $base),
+        ];
+    }
+    send(['data' => $data], 200, 0);
+}
+
+/** GET /api/admin/albums/{id} – ein Album samt Bildern. */
+function adminShowAlbum(PDO $db, int $id, string $base): void
+{
+    $stmt = $db->prepare(
+        'SELECT a.id, a.slug, a.title, a.excerpt, a.event_date, a.location,
+                a.category_id, a.cover_id, a.status,
+                m.path, m.alt, m.mime, m.width, m.height, m.bytes
+           FROM albums a
+           LEFT JOIN media m ON m.id = a.cover_id
+          WHERE a.id = :id
+          LIMIT 1'
+    );
+    $stmt->execute([':id' => $id]);
+    $album = $stmt->fetch();
+    if ($album === false) {
+        fail(404, 'Album nicht gefunden.');
+    }
+
+    $stmt = $db->prepare(
+        'SELECT m.id, m.path, m.alt, m.mime, m.width, m.height, m.bytes
+           FROM album_images ai
+           JOIN media m ON m.id = ai.media_id
+          WHERE ai.album_id = :id
+          ORDER BY ai.position'
+    );
+    $stmt->execute([':id' => $id]);
+
+    $images = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $images[] = mediaEntry($row, $base);
+    }
+
+    send([
+        'data' => [
+            'id'         => (int) $album['id'],
+            'slug'       => $album['slug'],
+            'title'      => $album['title'],
+            'excerpt'    => $album['excerpt'],
+            'date'       => $album['event_date'],
+            'location'   => $album['location'],
+            'categoryId' => $album['category_id'] === null ? null : (int) $album['category_id'],
+            'coverId'    => $album['cover_id'] === null ? null : (int) $album['cover_id'],
+            'cover'      => $album['cover_id'] === null
+                ? null
+                : mediaEntry(['id' => (int) $album['cover_id']] + $album, $base),
+            'status'     => $album['status'],
+            'images'     => $images,
+        ],
+    ], 200, 0);
+}
+
+/** POST /api/admin/albums – neues Album. */
+function adminCreateAlbum(PDO $db): void
+{
+    $body     = jsonBody();
+    $imageIds = albumImagesField($db, $body);
+    $fields   = albumFields($db, $body, null, $imageIds);
+
+    try {
+        $db->beginTransaction();
+
+        $stmt = $db->prepare(
+            'INSERT INTO albums (slug, title, excerpt, event_date, location,
+                                 category_id, cover_id, status)
+             VALUES (:slug, :title, :excerpt, :event_date, :location,
+                     :category_id, :cover_id, :status)'
+        );
+        $stmt->execute([
+            ':slug'        => $fields['slug'],
+            ':title'       => $fields['title'],
+            ':excerpt'     => $fields['excerpt'],
+            ':event_date'  => $fields['event_date'],
+            ':location'    => $fields['location'],
+            ':category_id' => $fields['category_id'],
+            ':cover_id'    => $fields['cover_id'],
+            ':status'      => $fields['status'],
+        ]);
+        $albumId = (int) $db->lastInsertId();
+
+        writeAlbumImages($db, $albumId, $imageIds);
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+
+    send(['data' => ['id' => $albumId, 'slug' => $fields['slug']]], 201, 0);
+}
+
+/** PUT /api/admin/albums/{id} – bestehendes Album speichern. */
+function adminUpdateAlbum(PDO $db, int $id): void
+{
+    $stmt = $db->prepare('SELECT id FROM albums WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    if ($stmt->fetchColumn() === false) {
+        fail(404, 'Album nicht gefunden.');
+    }
+
+    $body     = jsonBody();
+    $imageIds = albumImagesField($db, $body);
+    $fields   = albumFields($db, $body, $id, $imageIds);
+
+    try {
+        $db->beginTransaction();
+
+        $stmt = $db->prepare(
+            'UPDATE albums
+                SET slug = :slug, title = :title, excerpt = :excerpt,
+                    event_date = :event_date, location = :location,
+                    category_id = :category_id, cover_id = :cover_id, status = :status
+              WHERE id = :id'
+        );
+        $stmt->execute([
+            ':slug'        => $fields['slug'],
+            ':title'       => $fields['title'],
+            ':excerpt'     => $fields['excerpt'],
+            ':event_date'  => $fields['event_date'],
+            ':location'    => $fields['location'],
+            ':category_id' => $fields['category_id'],
+            ':cover_id'    => $fields['cover_id'],
+            ':status'      => $fields['status'],
+            ':id'          => $id,
+        ]);
+
+        writeAlbumImages($db, $id, $imageIds);
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+
+    send(['data' => ['id' => $id, 'slug' => $fields['slug']]], 200, 0);
+}
+
+/**
+ * DELETE /api/admin/albums/{id} – Album entfernen.
+ *
+ * album_images haengt per ON DELETE CASCADE daran und geht mit. Die Bilder
+ * selbst bleiben im Bestand: sie koennen anderswo verwendet sein.
+ */
+function adminDeleteAlbum(PDO $db, int $id): void
+{
+    $stmt = $db->prepare('DELETE FROM albums WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    if ($stmt->rowCount() === 0) {
+        fail(404, 'Album nicht gefunden.');
+    }
+    send(['data' => ['deleted' => true]], 200, 0);
+}
+
 // ── Endpunkte: Kategorien und Medien ────────────────────────
 
 /**
@@ -1229,6 +1515,23 @@ function handleAdmin(PDO $db, array $config, string $method, string $resource, ?
                     'GET'    => adminShowPost($db, $id, $base),
                     'PUT'    => adminUpdatePost($db, $id),
                     'DELETE' => adminDeletePost($db, $id),
+                    default  => methodNotAllowed('GET, PUT, DELETE'),
+                };
+            }
+            break;
+
+        case 'albums':
+            if ($id === null) {
+                match ($method) {
+                    'GET'   => adminListAlbums($db, $base),
+                    'POST'  => adminCreateAlbum($db),
+                    default => methodNotAllowed('GET, POST'),
+                };
+            } else {
+                match ($method) {
+                    'GET'    => adminShowAlbum($db, $id, $base),
+                    'PUT'    => adminUpdateAlbum($db, $id),
+                    'DELETE' => adminDeleteAlbum($db, $id),
                     default  => methodNotAllowed('GET, PUT, DELETE'),
                 };
             }

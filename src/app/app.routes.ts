@@ -186,6 +186,19 @@ export const routes: Routes = [
             title: 'Beitrag bearbeiten – VLT Admin',
           },
           {
+            path: 'galerie',
+            loadComponent: () =>
+              import('./pages/admin/galerie/galerie-admin').then((m) => m.GalerieAdmin),
+            title: 'Bildergalerien – VLT Admin',
+          },
+          {
+            // "neu" und eine Nummer teilen sich die Route, wie beim Beitrag.
+            path: 'galerie/:id',
+            loadComponent: () =>
+              import('./pages/admin/galerie/editor/album-editor').then((m) => m.AlbumEditor),
+            title: 'Album bearbeiten – VLT Admin',
+          },
+          {
             path: 'kategorien',
             loadComponent: () =>
               import('./pages/admin/kategorien/kategorien').then((m) => m.Kategorien),

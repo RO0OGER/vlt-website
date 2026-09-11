@@ -1,0 +1,254 @@
+<div class="editor">
+
+  <!-- ── Kopfleiste ────────────────────────────────────────── -->
+  <header class="bar">
+    <button type="button" class="back" (click)="back()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+      Bildergalerien
+    </button>
+
+    <div class="bar-state">
+      <span class="badge" [class.badge-draft]="status() === 'draft'">
+        {{ status() === 'published' ? 'Veröffentlicht' : 'Entwurf' }}
+      </span>
+      @if (dirty()) {
+        <span class="dirty">Nicht gespeichert</span>
+      } @else if (notice()) {
+        <span class="saved" aria-live="polite">{{ notice() }}</span>
+      }
+    </div>
+
+    <div class="bar-actions">
+      @if (!isNew() && status() === 'published') {
+        <a href="/galerie" target="_blank" rel="noopener" class="btn-plain">Ansehen</a>
+      }
+      <button type="button" class="btn-plain" (click)="save('draft')" [disabled]="saving() || loading()">
+        Als Entwurf speichern
+      </button>
+      <button type="button" class="btn-main" (click)="save('published')" [disabled]="saving() || loading()">
+        {{ saving() ? 'Wird gespeichert …' : 'Veröffentlichen' }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="note" aria-live="polite">Album wird geladen …</p>
+  } @else {
+
+    <div class="columns">
+
+      <!-- ── Bilder ──────────────────────────────────────────── -->
+      <main class="canvas">
+        <div class="field">
+          <label for="album-title">Titel</label>
+          <input
+            id="album-title"
+            class="title-input"
+            type="text"
+            [(ngModel)]="title"
+            (ngModelChange)="onTitleChange($event)"
+            placeholder="Titel des Albums"
+            maxlength="255"
+          />
+        </div>
+
+        <div class="field">
+          <label for="album-excerpt">Anrisstext</label>
+          <textarea
+            id="album-excerpt"
+            rows="2"
+            [(ngModel)]="excerpt"
+            (ngModelChange)="touch()"
+            placeholder="Kurze Beschreibung für die Karte in der Galerie …"
+            maxlength="2000"
+          ></textarea>
+        </div>
+
+        <div class="images-head">
+          <p class="images-label">
+            Bilder
+            <span class="images-count">{{ images().length }}</span>
+          </p>
+          <button type="button" class="btn-add" (click)="openImagePicker()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Bild hinzufügen
+          </button>
+        </div>
+
+        <p class="images-hint">
+          Die Reihenfolge bestimmt, wie die Lightbox blättert. Ziehen Sie eine Kachel
+          an ihren Platz oder verschieben Sie sie mit den Pfeilen.
+        </p>
+
+        @if (images().length === 0) {
+          <div class="canvas-empty">
+            <p>Noch keine Bilder.</p>
+            <p class="canvas-empty-hint">
+              Fügen Sie Bilder aus dem Bestand hinzu – oder laden Sie im Auswahlfenster
+              neue hoch.
+            </p>
+          </div>
+        } @else {
+          <ol class="grid" [class.is-dragging]="dragId() !== null">
+            <li
+              class="zone"
+              [class.active]="dropIndex() === 0"
+              (dragover)="overZone(0, $event)"
+              (drop)="dropAt(0, $event)"
+            ></li>
+
+            @for (image of images(); track image.id; let i = $index, last = $last) {
+              <li
+                class="tile"
+                draggable="true"
+                [class.is-cover]="effectiveCover()?.id === image.id"
+                (dragstart)="startDrag(image.id, $event)"
+                (dragend)="endDrag()"
+              >
+                <img [src]="image.src" [alt]="image.alt" loading="lazy" />
+
+                @if (effectiveCover()?.id === image.id) {
+                  <span class="tile-badge">Titelbild</span>
+                }
+
+                <span class="tile-pos" aria-hidden="true">{{ i + 1 }}</span>
+
+                <div class="tile-bar">
+                  <button
+                    type="button"
+                    class="tool"
+                    (click)="move(image.id, -1)"
+                    [disabled]="i === 0"
+                    [attr.aria-label]="'Bild ' + (i + 1) + ' nach vorne'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="tool"
+                    (click)="move(image.id, 1)"
+                    [disabled]="last"
+                    [attr.aria-label]="'Bild ' + (i + 1) + ' nach hinten'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="tool tool-danger"
+                    (click)="removeImage(image.id)"
+                    [attr.aria-label]="'Bild ' + (i + 1) + ' aus dem Album entfernen'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              </li>
+
+              <li
+                class="zone"
+                [class.active]="dropIndex() === i + 1"
+                (dragover)="overZone(i + 1, $event)"
+                (drop)="dropAt(i + 1, $event)"
+              ></li>
+            }
+          </ol>
+        }
+      </main>
+
+      <!-- ── Einstellungen ─────────────────────────────────── -->
+      <aside class="meta" aria-labelledby="meta-title">
+        <p class="col-title" id="meta-title">Einstellungen</p>
+
+        <div class="field">
+          <span class="field-label" id="cover-label">Titelbild</span>
+          <div class="cover" role="group" aria-labelledby="cover-label">
+            @if (effectiveCover(); as image) {
+              <img [src]="image.src" [alt]="image.alt" />
+              <div class="cover-actions">
+                <button type="button" class="link-btn" (click)="openCoverPicker()">Wählen</button>
+                @if (cover()) {
+                  <button type="button" class="link-btn" (click)="clearCover()">Zurücksetzen</button>
+                }
+              </div>
+            } @else {
+              <button type="button" class="cover-empty" (click)="openCoverPicker()">
+                Titelbild wählen
+              </button>
+            }
+          </div>
+          @if (!cover() && images().length) {
+            <p class="field-hint">Ohne eigene Wahl steht das erste Bild auf der Karte.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="album-date">Datum des Anlasses</label>
+          <input id="album-date" type="date" [(ngModel)]="date" (ngModelChange)="touch()" />
+        </div>
+
+        <div class="field">
+          <label for="album-location">Ort</label>
+          <input
+            id="album-location"
+            type="text"
+            [(ngModel)]="location"
+            (ngModelChange)="touch()"
+            placeholder="Optional, z. B. Olten"
+            maxlength="160"
+          />
+        </div>
+
+        <div class="field">
+          <label for="album-category">Kategorie</label>
+          <select id="album-category" [(ngModel)]="categoryId" (ngModelChange)="touch()">
+            <option [ngValue]="null">– keine –</option>
+            @for (category of categories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+          <p class="field-hint">Bildet die Filterleiste der Galerie.</p>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="address-label">Adresse</span>
+          <p class="address" aria-labelledby="address-label">{{ slugPreview() || '…' }}</p>
+          <p class="field-hint">Entsteht aus dem Titel.</p>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="status-label">Status</span>
+          <div class="status-toggle" role="group" aria-labelledby="status-label">
+            <button type="button" [class.active]="status() === 'draft'" (click)="setStatus('draft')">
+              Entwurf
+            </button>
+            <button type="button" [class.active]="status() === 'published'" (click)="setStatus('published')">
+              Öffentlich
+            </button>
+          </div>
+          <p class="field-hint">Entwürfe erscheinen nicht in der Galerie.</p>
+        </div>
+      </aside>
+    </div>
+  }
+</div>
+
+@if (picker()) {
+  <app-media-picker
+    [usedIds]="usedImageIds()"
+    (chosen)="onImageChosen($event)"
+    (closed)="closePicker()"
+  />
+}

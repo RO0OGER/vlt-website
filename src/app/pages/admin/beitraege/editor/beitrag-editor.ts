@@ -24,7 +24,7 @@ import {
   toEditorBlocks,
   toPayloadBlocks,
 } from '../../../../shared/blocks';
-import { MediaPicker } from '../media-picker/media-picker';
+import { MediaPicker } from '../../../../shared/media-picker/media-picker';
 
 /**
  * Woher ein laufender Zug kommt: aus der Bausteinleiste (ein neuer Block)

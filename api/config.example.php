@@ -30,6 +30,8 @@
  *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_section_images TO 'db_user'@'localhost';
  *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_categories     TO 'db_user'@'localhost';
  *   GRANT SELECT, INSERT,         DELETE ON categories          TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON albums              TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON album_images        TO 'db_user'@'localhost';
  *   GRANT SELECT, INSERT, DELETE         ON media               TO 'db_user'@'localhost';
  *
  * categories ohne UPDATE: Kategorien werden angelegt und (solange sie
