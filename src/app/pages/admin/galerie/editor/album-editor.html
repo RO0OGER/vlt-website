@@ -98,22 +98,36 @@
           </div>
         } @else {
           <ol class="grid" [class.is-dragging]="dragId() !== null">
-            <li
-              class="zone"
-              [class.active]="dropIndex() === 0"
-              (dragover)="overZone(0, $event)"
-              (drop)="dropAt(0, $event)"
-            ></li>
-
             @for (image of images(); track image.id; let i = $index, last = $last) {
+              <!--
+                Die Kachel ist selbst die Ablegestelle: welche Haelfte der
+                Zeiger trifft, entscheidet ueber davor oder dahinter. Schmale
+                Streifen zwischen den Kacheln waeren kaum zu treffen.
+
+                Gezogen wird nur am Bild. Laege draggable auf der ganzen
+                Kachel, schluckte der Browser die Klicks auf die Knoepfe
+                darunter und startete stattdessen einen Zug.
+              -->
               <li
                 class="tile"
-                draggable="true"
+                [attr.draggable]="armed() === image.id"
                 [class.is-cover]="effectiveCover()?.id === image.id"
+                [class.drop-before]="dropIndex() === i"
+                [class.drop-after]="last && dropIndex() === i + 1"
+                [class.is-dragged]="dragId() === image.id"
                 (dragstart)="startDrag(image.id, $event)"
                 (dragend)="endDrag()"
+                (dragover)="overTile(i, $event)"
+                (drop)="dropOnTile($event)"
               >
-                <img [src]="image.src" [alt]="image.alt" loading="lazy" />
+                <img
+                  class="tile-grab"
+                  [src]="image.src"
+                  [alt]="image.alt"
+                  loading="lazy"
+                  (mousedown)="armed.set(image.id)"
+                  (mouseup)="armed.set(null)"
+                />
 
                 @if (effectiveCover()?.id === image.id) {
                   <span class="tile-badge">Titelbild</span>
@@ -156,13 +170,6 @@
                   </button>
                 </div>
               </li>
-
-              <li
-                class="zone"
-                [class.active]="dropIndex() === i + 1"
-                (dragover)="overZone(i + 1, $event)"
-                (drop)="dropAt(i + 1, $event)"
-              ></li>
             }
           </ol>
         }

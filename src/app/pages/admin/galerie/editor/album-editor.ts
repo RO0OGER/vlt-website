@@ -64,6 +64,15 @@ export class AlbumEditor {
   readonly slug = signal('');
   readonly slugPreview = signal('');
 
+  /**
+   * Bild, auf dessen Vorschau die Maus gerade gedrueckt ist.
+   *
+   * Nur dieses darf gezogen werden. Laege draggable fest auf der ganzen
+   * Kachel, wuerde der Browser schon beim Druck auf einen der Knoepfe
+   * darunter einen Zug beginnen – der Klick kaeme nie an, und die Pfeile
+   * waeren wirkungslos.
+   */
+  readonly armed = signal<number | null>(null);
   /** Bild, das gerade gezogen wird. */
   readonly dragId = signal<number | null>(null);
   /** Stelle, an der beim Loslassen eingefuegt wird. */
@@ -229,24 +238,39 @@ export class AlbumEditor {
   // ── Ziehen und Ablegen ─────────────────────────────────────
 
   startDrag(id: number, event: DragEvent): void {
+    // Gezogen wird nur, was am Bild aufgenommen wurde.
+    if (this.armed() !== id) {
+      event.preventDefault();
+      return;
+    }
     this.dragId.set(id);
     // setData ist Pflicht: ohne Nutzlast bricht Firefox den Zug sofort ab.
     event.dataTransfer?.setData('text/plain', String(id));
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
   }
 
-  overZone(index: number, event: DragEvent): void {
+  /**
+   * Ueber einer Kachel. Die Haelfte, in der der Zeiger steht, entscheidet:
+   * linke Haelfte heisst davor einfuegen, rechte dahinter. So ist jede
+   * Kachel auf ihrer ganzen Breite ein Ziel – schmale Streifen dazwischen
+   * waeren kaum zu treffen.
+   */
+  overTile(index: number, event: DragEvent): void {
     if (this.dragId() === null) return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    this.dropIndex.set(index);
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const hintenRein = event.clientX > rect.left + rect.width / 2;
+    this.dropIndex.set(hintenRein ? index + 1 : index);
   }
 
-  dropAt(index: number, event: DragEvent): void {
+  dropOnTile(event: DragEvent): void {
     event.preventDefault();
     const id = this.dragId();
+    const index = this.dropIndex();
     this.endDrag();
-    if (id === null) return;
+    if (id === null || index === null) return;
 
     this.images.update((list) => {
       const from = list.findIndex((image) => image.id === id);
@@ -254,7 +278,8 @@ export class AlbumEditor {
 
       const next = [...list];
       const [moved] = next.splice(from, 1);
-      // Nach dem Herausnehmen rutscht alles dahinter eine Stelle vor.
+      // Nach dem Herausnehmen rutscht alles dahinter eine Stelle vor – die
+      // Zielstelle muss mitrutschen, sonst landet das Bild daneben.
       next.splice(index > from ? index - 1 : index, 0, moved);
       return next;
     });
@@ -262,6 +287,7 @@ export class AlbumEditor {
   }
 
   endDrag(): void {
+    this.armed.set(null);
     this.dragId.set(null);
     this.dropIndex.set(null);
   }

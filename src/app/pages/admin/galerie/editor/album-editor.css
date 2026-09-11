@@ -235,23 +235,6 @@
   padding: 0;
 }
 
-/* Ablegestellen zwischen den Kacheln: im Ruhezustand unsichtbar,
-   während eines Zugs ein sichtbarer Streifen. */
-.zone {
-  width: 4px;
-  border-radius: 3px;
-  transition: width 0.12s, background 0.12s;
-}
-
-.grid.is-dragging .zone {
-  width: 16px;
-  background: rgba(47, 47, 127, 0.08);
-}
-
-.grid.is-dragging .zone.active {
-  background: var(--vlt-nav);
-}
-
 .tile {
   position: relative;
   width: 150px;
@@ -259,11 +242,45 @@
   border-radius: 10px;
   overflow: hidden;
   background: var(--vlt-bg);
+}
+
+/* Nur das Bild ist der Anfasser – die Knöpfe darunter müssen klickbar
+   bleiben, und ein Zug soll dort nicht beginnen. */
+.tile-grab {
   cursor: grab;
 }
 
-.tile:active {
+.tile-grab:active {
   cursor: grabbing;
+}
+
+/* Die gezogene Kachel tritt zurück, damit sichtbar bleibt, wohin sie geht. */
+.tile.is-dragged {
+  opacity: 0.4;
+}
+
+/*
+ * Einfügemarke: ein kräftiger Balken an der Kante, an der das Bild landet.
+ * "drop-after" gibt es nur an der letzten Kachel – sonst zeigten zwei
+ * Nachbarn dieselbe Stelle doppelt an.
+ */
+.grid.is-dragging .tile.drop-before::before,
+.grid.is-dragging .tile.drop-after::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--vlt-nav);
+  z-index: 2;
+}
+
+.grid.is-dragging .tile.drop-before::before {
+  left: 0;
+}
+
+.grid.is-dragging .tile.drop-after::after {
+  right: 0;
 }
 
 .tile.is-cover {
