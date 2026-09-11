@@ -1,0 +1,83 @@
+<div class="pw-page">
+  <div class="pw-card">
+
+    <div class="pw-brand">
+      <span class="pw-brand-dot"></span>
+      VLT Admin
+    </div>
+
+    @if (forced()) {
+      <h1 class="pw-title">Passwort festlegen</h1>
+      <p class="pw-sub">
+        Sie haben sich mit dem zugeteilten Startpasswort angemeldet. Bevor es weitergeht,
+        vergeben Sie bitte ein eigenes.
+      </p>
+    } @else {
+      <h1 class="pw-title">Passwort ändern</h1>
+      <p class="pw-sub">Das neue Passwort gilt sofort für alle Geräte.</p>
+    }
+
+    @if (error()) {
+      <div class="pw-error" role="alert">{{ error() }}</div>
+    }
+
+    <form (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label for="pw-current">{{ forced() ? 'Startpasswort' : 'Aktuelles Passwort' }}</label>
+        <input
+          id="pw-current"
+          type="password"
+          name="current"
+          [ngModel]="current()"
+          (ngModelChange)="current.set($event)"
+          autocomplete="current-password"
+          [disabled]="saving()"
+        />
+      </div>
+
+      <div class="field">
+        <label for="pw-new">Neues Passwort</label>
+        <input
+          id="pw-new"
+          type="password"
+          name="next"
+          [ngModel]="next()"
+          (ngModelChange)="next.set($event)"
+          autocomplete="new-password"
+          [disabled]="saving()"
+        />
+        @if (tooShort()) {
+          <p class="field-warn">Mindestens {{ minLength }} Zeichen.</p>
+        } @else {
+          <p class="field-hint">
+            Mindestens {{ minLength }} Zeichen. Ein langer Satz ist sicherer und leichter
+            zu merken als ein kurzes Kunstwort.
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="pw-repeat">Neues Passwort wiederholen</label>
+        <input
+          id="pw-repeat"
+          type="password"
+          name="repeat"
+          [ngModel]="repeat()"
+          (ngModelChange)="repeat.set($event)"
+          autocomplete="new-password"
+          [disabled]="saving()"
+        />
+        @if (mismatch()) {
+          <p class="field-warn">Die beiden Eingaben stimmen nicht überein.</p>
+        }
+      </div>
+
+      <button type="submit" class="pw-btn" [disabled]="!canSubmit()">
+        {{ saving() ? 'Wird gespeichert …' : 'Passwort speichern' }}
+      </button>
+    </form>
+
+    <button type="button" class="pw-logout" (click)="logout()">Abmelden</button>
+
+  </div>
+</div>

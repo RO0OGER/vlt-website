@@ -168,8 +168,27 @@ function listPosts(PDO $db, string $base): void
         if (!validSlug($category)) {
             fail(400, 'Ungültige Kategorie.');
         }
-        $filter                = ' AND c.slug = :category';
-        $params[':category']   = $category;
+        /*
+         * Ein Beitrag gehoert zu seiner Hauptkategorie (posts.category_id)
+         * und zu weiteren ueber post_categories. Gefiltert wird ueber beide.
+         *
+         * Vorher zaehlte nur die Hauptkategorie – und damit fand die
+         * Filterleiste unter "Verband" einen Beitrag, waehrend die Zahl
+         * daneben 24 versprach. Die Zahl kam naemlich schon immer aus beiden
+         * Quellen (siehe listCategories), die Auswahl aber nur aus einer.
+         *
+         * Zwei Platzhalter fuer denselben Wert: bei echten Prepared
+         * Statements (EMULATE_PREPARES = false) darf ein benannter
+         * Platzhalter nur einmal vorkommen.
+         */
+        $filter = ' AND (c.slug = :category
+                         OR EXISTS (SELECT 1
+                                      FROM post_categories pc
+                                      JOIN categories c2 ON c2.id = pc.category_id
+                                     WHERE pc.post_id = p.id
+                                       AND c2.slug = :category_extra))';
+        $params[':category']       = $category;
+        $params[':category_extra'] = $category;
     }
 
     // Gesamtzahl zuerst – das Frontend braucht sie fuer die Blaetterleiste.
@@ -200,8 +219,40 @@ function listPosts(PDO $db, string $base): void
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
 
+    $rows = $stmt->fetchAll();
+
+    /*
+     * Die weiteren Kategorien aller Beitraege dieser Seite in einer einzigen
+     * Abfrage – nicht eine je Beitrag. Die Uebersicht filtert im Browser und
+     * braucht dafuer zu jedem Beitrag die vollstaendige Liste; ohne sie
+     * koennte sie nur nach der Hauptkategorie filtern.
+     */
+    $extra = [];
+    if ($rows !== []) {
+        $ids          = array_column($rows, 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt         = $db->prepare(
+            'SELECT pc.post_id, c.name
+               FROM post_categories pc
+               JOIN categories c ON c.id = pc.category_id
+              WHERE pc.post_id IN (' . $placeholders . ')
+              ORDER BY c.sort, c.name'
+        );
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll() as $row) {
+            $extra[(int) $row['post_id']][] = $row['name'];
+        }
+    }
+
     $data = [];
-    foreach ($stmt->fetchAll() as $row) {
+    foreach ($rows as $row) {
+        // Hauptkategorie zuerst, danach die weiteren – ohne Dubletten und
+        // ohne Leerstellen, damit die Filterleiste sie direkt uebernehmen kann.
+        $categories = array_values(array_unique(array_filter(
+            array_merge([$row['category']], $extra[(int) $row['id']] ?? []),
+            static fn ($name) => is_string($name) && $name !== ''
+        )));
+
         $data[] = [
             'id'           => (int) $row['id'],
             'slug'         => $row['slug'],
@@ -210,6 +261,7 @@ function listPosts(PDO $db, string $base): void
             'date'         => $row['published_at'],
             'category'     => $row['category'],
             'categorySlug' => $row['category_slug'],
+            'categories'   => $categories,
             'readMinutes'  => $row['read_minutes'] === null ? null : (int) $row['read_minutes'],
             'cover'        => mediaObject($row, $base),
         ];
@@ -258,7 +310,7 @@ function showPost(PDO $db, string $slug, string $base): void
 
     // Abschnitte und ihre Bilder in zwei Abfragen statt einer pro Abschnitt.
     $stmt = $db->prepare(
-        'SELECT id, text FROM post_sections WHERE post_id = :id ORDER BY position, id'
+        'SELECT id, kind, text FROM post_sections WHERE post_id = :id ORDER BY position, id'
     );
     $stmt->execute([':id' => $postId]);
     $sections = $stmt->fetchAll();
@@ -283,6 +335,9 @@ function showPost(PDO $db, string $slug, string $base): void
     $sectionData = [];
     foreach ($sections as $section) {
         $sectionData[] = [
+            // Art des Bausteins: text, heading, quote, image, gallery.
+            // Beitraege aus der Migration haben durchgehend "text".
+            'kind'   => $section['kind'],
             'text'   => $section['text'],
             'images' => $images[(int) $section['id']] ?? [],
         ];
@@ -542,7 +597,7 @@ function currentUser(PDO $db): ?array
     // NOW() statt einer Zeit aus PHP: so entscheidet nur eine Uhr darueber,
     // wann ein Token ablaeuft.
     $stmt = $db->prepare(
-        'SELECT u.id, u.email
+        'SELECT u.id, u.email, u.must_change_password
            FROM user_tokens t
            JOIN users u ON u.id = t.user_id
           WHERE t.token = :token AND t.expires_at > NOW()
@@ -568,7 +623,10 @@ function login(PDO $db): void
         fail(400, 'E-Mail und Passwort sind nötig.');
     }
 
-    $stmt = $db->prepare('SELECT id, password_hash FROM users WHERE email = :email LIMIT 1');
+    $stmt = $db->prepare(
+        'SELECT id, password_hash, must_change_password
+           FROM users WHERE email = :email LIMIT 1'
+    );
     $stmt->execute([':email' => $email]);
     $user = $stmt->fetch();
 
@@ -605,7 +663,13 @@ function login(PDO $db): void
         ':expires' => $expires,
     ]);
 
-    send(['data' => ['token' => $token, 'expiresAt' => $expires]], 200, 0);
+    send(['data' => [
+        'token'     => $token,
+        'expiresAt' => $expires,
+        // Steht hier true, laesst die API bis zur Passwortaenderung nichts
+        // anderes zu. Das Frontend schickt den Benutzer darum gleich weiter.
+        'mustChangePassword' => (bool) $user['must_change_password'],
+    ]], 200, 0);
 }
 
 /** GET /api/auth/me – bestaetigt, dass das Token noch gilt. */
@@ -615,7 +679,113 @@ function showMe(PDO $db): void
     if ($user === null) {
         fail(401, 'Nicht angemeldet.');
     }
-    send(['data' => ['email' => $user['email']]], 200, 0);
+    send(['data' => [
+        'email'              => $user['email'],
+        'mustChangePassword' => (bool) $user['must_change_password'],
+    ]], 200, 0);
+}
+
+/**
+ * Kosten des bcrypt-Hashes.
+ *
+ * Hoehere Kosten heissen langsamer zu raten, aber auch langsamer beim
+ * Anmelden. 12 ist der uebliche Kompromiss – und derselbe Wert, den
+ * tools/admin-hash.mjs benutzt. Beide muessen uebereinstimmen, sonst haetten
+ * von Hand angelegte und im CMS angelegte Zugaenge unterschiedlich starke
+ * Hashes.
+ */
+const PASSWORT_KOSTEN = 12;
+
+/**
+ * Kuerzestes erlaubtes Passwort.
+ *
+ * Laenge schlaegt Sonderzeichen: ein langes Passwort aus Kleinbuchstaben ist
+ * schwerer zu raten als ein kurzes mit Zahl und Ausrufezeichen. Darum eine
+ * Mindestlaenge und sonst keine Vorschriften.
+ */
+const PASSWORT_MIN = 12;
+
+/**
+ * Laengstes erlaubtes Passwort.
+ *
+ * bcrypt rechnet nur mit den ersten 72 Bytes und wirft den Rest still weg.
+ * Wer ein 90 Zeichen langes Passwort setzt, saehe es angenommen – und koennte
+ * sich spaeter mit den ersten 72 Zeichen anmelden. Lieber hier abweisen.
+ */
+const PASSWORT_MAX = 72;
+
+/**
+ * POST /api/auth/password – eigenes Passwort aendern.
+ *
+ * Verlangt das aktuelle Passwort, auch beim erzwungenen ersten Wechsel: ein
+ * Token allein soll nicht genuegen, um ein Passwort zu setzen. Wer ein fremdes
+ * Notebook offen vorfindet, kaeme sonst dauerhaft hinein.
+ */
+function changePassword(PDO $db): void
+{
+    $user = currentUser($db);
+    if ($user === null) {
+        fail(401, 'Nicht angemeldet.');
+    }
+
+    $body    = jsonBody();
+    $current = is_string($body['currentPassword'] ?? null) ? $body['currentPassword'] : '';
+    $next    = is_string($body['newPassword'] ?? null) ? $body['newPassword'] : '';
+
+    if ($current === '' || $next === '') {
+        fail(400, 'Aktuelles und neues Passwort sind nötig.');
+    }
+
+    $stmt = $db->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $user['id']]);
+    $hash = $stmt->fetchColumn();
+
+    if ($hash === false || !password_verify($current, (string) $hash)) {
+        fail(401, 'Das aktuelle Passwort stimmt nicht.');
+    }
+
+    // strlen zaehlt Bytes, nicht Zeichen – und auf Bytes kommt es bei der
+    // 72er-Grenze von bcrypt an.
+    if (mb_strlen($next) < PASSWORT_MIN) {
+        fail(422, 'Das neue Passwort braucht mindestens ' . PASSWORT_MIN . ' Zeichen.');
+    }
+    if (strlen($next) > PASSWORT_MAX) {
+        fail(422, 'Das neue Passwort ist zu lang.');
+    }
+    if ($next === $current) {
+        fail(422, 'Das neue Passwort muss sich vom bisherigen unterscheiden.');
+    }
+
+    $stmt = $db->prepare(
+        'UPDATE users
+            SET password_hash = :hash, must_change_password = 0
+          WHERE id = :id'
+    );
+    $stmt->execute([
+        ':hash' => password_hash($next, PASSWORD_BCRYPT, ['cost' => PASSWORT_KOSTEN]),
+        ':id'   => $user['id'],
+    ]);
+
+    /*
+     * Alle bisherigen Tokens verfallen und es gibt ein frisches.
+     *
+     * Wer sein Passwort aendert, tut das oft gerade deshalb, weil jemand
+     * anderes es kennen koennte. Dann muessen dessen offene Sitzungen enden.
+     * Das neue Token geht an den, der die Aenderung vorgenommen hat – er
+     * bleibt angemeldet und muss sich nicht neu anmelden.
+     */
+    $stmt = $db->prepare('DELETE FROM user_tokens WHERE user_id = :uid');
+    $stmt->execute([':uid' => $user['id']]);
+
+    $token   = bin2hex(random_bytes(32));
+    $expires = (string) $db->query('SELECT DATE_ADD(NOW(), INTERVAL 8 HOUR)')->fetchColumn();
+
+    $stmt = $db->prepare(
+        'INSERT INTO user_tokens (user_id, token, expires_at) VALUES (:uid, :token, :expires)'
+    );
+    $stmt->execute([':uid' => $user['id'], ':token' => $token, ':expires' => $expires]);
+
+    send(['data' => ['token' => $token, 'expiresAt' => $expires]], 200, 0);
 }
 
 /** POST /api/auth/logout – macht das Token ungueltig. */
@@ -651,6 +821,9 @@ function handleAuth(PDO $db, string $method, ?string $action): void
         case 'me':
             $method === 'GET' ? showMe($db) : methodNotAllowed('GET');
             break;
+        case 'password':
+            $method === 'POST' ? changePassword($db) : methodNotAllowed('POST');
+            break;
         default:
             fail(404, 'Nicht gefunden.');
     }
@@ -660,10 +833,12 @@ function handleAuth(PDO $db, string $method, ?string $action): void
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// Gelesen wird mit GET, angemeldet mit POST. Mehr Methoden gibt es nicht.
-if ($method !== 'GET' && $method !== 'POST') {
-    header('Allow: GET, POST');
-    fail(405, 'Nur GET und POST werden unterstützt.');
+// Gelesen wird mit GET, angemeldet mit POST. PUT und DELETE gibt es einzig
+// im angemeldeten Bereich unter /api/admin/ – der Router unten laesst sie
+// nirgends sonst durch.
+if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
+    header('Allow: GET, POST, PUT, DELETE');
+    fail(405, 'Diese Methode wird nicht unterstützt.');
 }
 
 // Pfad hinter /api/ ermitteln, Query-String abschneiden.
@@ -677,6 +852,21 @@ try {
     $resource = $parts[0] ?? '';
     $item     = $parts[1] ?? null;
 
+    /*
+     * Der CMS-Bereich liegt eine Ebene tiefer (/api/admin/posts/12) und
+     * arbeitet mit Nummern statt Slugs. Deshalb zweigt er ab, bevor die
+     * Slug- und Laengenpruefung der Leserouten greift. Die Anmeldung prueft
+     * handleAdmin() als Allererstes.
+     */
+    if ($resource === 'admin') {
+        if (count($parts) > 3) {
+            fail(404, 'Nicht gefunden.');
+        }
+        require __DIR__ . '/admin.php';
+        handleAdmin($db, $config, $method, $item ?? '', $parts[2] ?? null);
+        exit;
+    }
+
     // Ein Slug in der URL wird geprueft, bevor irgendeine Abfrage laeuft.
     if ($item !== null && !validSlug($item)) {
         fail(404, 'Nicht gefunden.');
@@ -685,7 +875,7 @@ try {
         fail(404, 'Nicht gefunden.');
     }
 
-    // Ausserhalb der Anmeldung bleibt es beim reinen Lesen.
+    // Ausserhalb von Anmeldung und CMS bleibt es beim reinen Lesen.
     if ($resource !== 'auth' && $method !== 'GET') {
         methodNotAllowed('GET');
     }

@@ -1,0 +1,356 @@
+:host {
+  display: block;
+}
+
+.page {
+  padding: 40px 48px;
+  max-width: 820px;
+}
+
+.page-head {
+  margin-bottom: 26px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vlt-text);
+}
+
+.page-sub {
+  margin: 0;
+  font-size: 15px;
+  color: var(--vlt-muted);
+}
+
+.alert {
+  margin: 0 0 20px;
+  padding: 11px 16px;
+  background: #fff0f0;
+  border: 1px solid #e9b7b1;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #c0392b;
+}
+
+.note {
+  font-size: 14px;
+  color: var(--vlt-muted);
+}
+
+/* ── Startpasswort ────────────────────────────────────────── */
+.secret {
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  background: #fffdf5;
+  border: 1px solid var(--vlt-primary);
+  border-radius: 12px;
+}
+
+.secret h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.secret-lead,
+.secret-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--vlt-muted);
+}
+
+.secret-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.secret-code {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+  font-family: var(--vlt-mono);
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: var(--vlt-text);
+  /* Damit sich das Passwort mit einem Doppelklick ganz markieren lässt. */
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.secret-copy {
+  flex-shrink: 0;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--vlt-nav);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secret-copy:hover {
+  background: var(--vlt-nav-deep);
+}
+
+.secret-done {
+  margin-top: 14px;
+  padding: 8px 16px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vlt-text);
+  cursor: pointer;
+}
+
+.secret-done:hover {
+  background: var(--vlt-bg);
+}
+
+/* ── Neuer Zugang ─────────────────────────────────────────── */
+.new-user {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.new-user-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.new-user-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vlt-text);
+}
+
+.new-user-field input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 13px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.new-user-field input:focus {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: -1px;
+  border-color: var(--vlt-nav);
+}
+
+.btn-new {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--vlt-nav);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-new:hover:not(:disabled) {
+  background: var(--vlt-nav-deep);
+}
+
+.btn-new:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Liste ────────────────────────────────────────────────── */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-email {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.row-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--vlt-muted);
+}
+
+.tag {
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--vlt-card);
+  color: var(--vlt-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tag-lock {
+  background: #e8e8f4;
+  color: var(--vlt-nav);
+}
+
+.tag-warn {
+  background: #fdf1dc;
+  color: #97671a;
+}
+
+.row-hint {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--vlt-muted);
+}
+
+.action {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vlt-muted);
+  cursor: pointer;
+}
+
+.action-danger:hover {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+/* ── Rückfrage ────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(26, 26, 40, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.confirm {
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px;
+  max-width: 440px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+}
+
+.confirm h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.confirm p {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--vlt-muted);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-plain,
+.btn-danger {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.btn-plain {
+  background: transparent;
+  border: 1px solid var(--vlt-rule);
+  color: var(--vlt-text);
+}
+
+.btn-danger {
+  background: #c0392b;
+  border: 0;
+  color: #fff;
+}
+
+.btn-plain:disabled,
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .page {
+    padding: 24px 20px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .new-user {
+    flex-wrap: wrap;
+  }
+
+  .secret-row {
+    flex-direction: column;
+  }
+
+  .secret-copy {
+    padding: 11px;
+  }
+}

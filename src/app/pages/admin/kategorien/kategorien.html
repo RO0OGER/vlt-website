@@ -1,0 +1,110 @@
+<div class="page">
+
+  <header class="page-head">
+    <div>
+      <h1>Kategorien</h1>
+      <p class="page-sub">
+        Ordnen Beiträge und Alben und bilden die Filterleiste der Übersicht.
+      </p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="ok" aria-live="polite">{{ notice() }}</p>
+  }
+
+  <!-- ── Neue Kategorie ─────────────────────────────────────── -->
+  <form class="new-cat" (ngSubmit)="create()" novalidate>
+    <div class="new-cat-field">
+      <label for="cat-name">Neue Kategorie</label>
+      <input
+        id="cat-name"
+        type="text"
+        name="name"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+        placeholder="z. B. Weiterbildung"
+        autocomplete="off"
+        [disabled]="creating()"
+        maxlength="100"
+      />
+      @if (duplicate()) {
+        <p class="field-warn">Diese Kategorie gibt es schon.</p>
+      } @else if (slugPreview()) {
+        <p class="field-hint">Adresse: {{ slugPreview() }}</p>
+      } @else {
+        <p class="field-hint">Die Adresse entsteht aus dem Namen.</p>
+      }
+    </div>
+    <button type="submit" class="btn-new" [disabled]="!canCreate()">
+      {{ creating() ? 'Wird angelegt …' : 'Anlegen' }}
+    </button>
+  </form>
+
+  <!-- ── Liste ──────────────────────────────────────────────── -->
+  @if (loading()) {
+    <p class="note" aria-live="polite">Kategorien werden geladen …</p>
+  } @else if (categories().length === 0) {
+    <div class="empty">
+      <p class="empty-title">Noch keine Kategorien</p>
+      <p class="empty-text">Legen Sie oben die erste an.</p>
+    </div>
+  } @else {
+    <ul class="list">
+      @for (category of categories(); track category.id) {
+        <li class="row">
+          <div class="row-main">
+            <p class="row-name">{{ category.name }}</p>
+            <p class="row-meta">
+              <span class="row-slug">{{ category.slug }}</span>
+              <span aria-hidden="true">·</span>
+              <span>{{ usageLabel(category) }}</span>
+            </p>
+          </div>
+
+          @if (category.inUse) {
+            <!-- Löschen würde die Kategorie still aus jedem Beitrag
+                 entfernen, der sie trägt. Darum hier nur der Grund. -->
+            <span class="row-hint">In Verwendung</span>
+          } @else {
+            <button type="button" class="action action-danger" (click)="askDelete(category)">
+              Löschen
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<!-- ── Rückfrage vor dem Löschen ───────────────────────────── -->
+@if (confirming(); as category) {
+  <div class="backdrop">
+    <div
+      class="confirm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      tabindex="-1"
+      #panel
+      (keydown)="onConfirmKeydown($event)"
+    >
+      <h2 id="confirm-title">Kategorie löschen?</h2>
+      <p>
+        «{{ category.name }}» wird entfernt. Sie wird zurzeit von keinem Beitrag und
+        keinem Album verwendet, es geht also kein Inhalt verloren.
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-plain" (click)="cancelDelete()" [disabled]="deleting()">
+          Abbrechen
+        </button>
+        <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting()">
+          {{ deleting() ? 'Wird gelöscht …' : 'Endgültig löschen' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -32,15 +32,32 @@ export interface ApiPost {
   excerpt: string;
   /** ISO-Datum (YYYY-MM-DD). */
   date: string;
+  /** Hauptkategorie – sie steht auf der Karte. */
   category: string | null;
   categorySlug: string | null;
+  /**
+   * Alle Kategorien des Beitrags, Hauptkategorie zuerst. Die Uebersicht
+   * filtert danach: ein Beitrag gehoert oft zu mehreren, und nach jeder
+   * davon soll er sich finden lassen.
+   */
+  categories: string[];
   cover: ApiImage | null;
+}
+
+/** Art eines Abschnitts. Beitraege aus der Migration sind durchgehend 'text'. */
+export type ApiSectionKind = 'text' | 'heading' | 'quote' | 'image' | 'gallery';
+
+/** Ein Abschnitt der Detailseite: Art, Text und null bis zwei Bilder. */
+export interface ApiSection {
+  kind: ApiSectionKind;
+  text: string;
+  images: ApiImage[];
 }
 
 export interface ApiPostDetail extends ApiPost {
   author: string | null;
   categories: string[];
-  sections: { text: string; images: ApiImage[] }[];
+  sections: ApiSection[];
 }
 
 export interface ApiCategory {

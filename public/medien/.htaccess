@@ -1,0 +1,34 @@
+# Medienordner: hier liegen ausschliesslich Bilder und Dokumente – auch die,
+# die im CMS hochgeladen werden (medien/uploads/<Jahr>/).
+#
+# Die API nimmt nur JPEG, PNG, WebP und GIF an, prueft den Typ am Inhalt und
+# vergibt die Dateiendung selbst. Trotzdem steht diese Sperre hier: ein
+# Ordner, in den von aussen geschrieben werden kann, darf unter keinen
+# Umstaenden Code ausfuehren. Faellt die Pruefung in der API eines Tages aus
+# oder kommt ein zweiter Weg dazu, faengt diese Zeile den Schaden ab.
+
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+
+# Greift auch dort, wo PHP nicht als Apache-Modul laeuft (CGI/FastCGI):
+# alles, was der Server als Skript ansehen koennte, wird nicht bedient.
+<FilesMatch "\.(php|phtml|php[0-9]|phar|cgi|pl|py|shtml|htaccess)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Kein Verzeichnislisting: der Bestand geht niemanden etwas an.
+Options -Indexes -ExecCGI
+
+# Falls der Server eine Endung doch einem Handler zuordnet, wird sie hier
+# wieder entfernt.
+<IfModule mod_mime.c>
+  RemoveHandler .php .phtml .phar .cgi .pl .py
+  RemoveType .php .phtml .phar
+</IfModule>

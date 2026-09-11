@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
@@ -5,11 +6,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { ContentApi } from '../../../shared/content-api';
-import { PostView, ViewImage, toPostView } from '../../../shared/post-view';
+import { PostView, SectionView, ViewImage, toPostView } from '../../../shared/post-view';
 
 @Component({
   selector: 'app-beitrag-detail',
-  imports: [RouterLink],
+  imports: [RouterLink, NgTemplateOutlet],
   templateUrl: './beitrag-detail.html',
   styleUrl: './beitrag-detail.css',
 })
@@ -59,10 +60,10 @@ export class BeitragDetailPage {
    * Ist der Beitrag noch nicht ausgeschrieben, steht wenigstens der
    * Anrisstext da – eine Detailseite ohne Inhalt waere eine Sackgasse.
    */
-  readonly sections = computed(() => {
+  readonly sections = computed<SectionView[]>(() => {
     const p = this.post();
     if (!p) return [];
-    return p.sections.length ? p.sections : [{ text: p.excerpt, images: [] }];
+    return p.sections.length ? p.sections : [{ kind: 'text', text: p.excerpt, images: [] }];
   });
 
   /** Initialen fuer das Autorenzeichen, z. B. "Sandra Meier" → "SM". */

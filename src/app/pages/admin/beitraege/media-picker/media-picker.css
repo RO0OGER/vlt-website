@@ -1,0 +1,395 @@
+:host {
+  display: contents;
+}
+
+/* Nur fuer Screenreader: sichtbar entfernt, im Baum vorhanden. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Hintergrund ──────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(26, 26, 40, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Fenster ──────────────────────────────────────────────── */
+.dialog {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--vlt-rule);
+}
+
+.dialog-head h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dialog-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vlt-muted);
+}
+
+.icon-btn {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px;
+  color: var(--vlt-muted);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.icon-btn:hover {
+  background: var(--vlt-bg);
+  color: var(--vlt-text);
+}
+
+/* ── Werkzeugleiste ───────────────────────────────────────── */
+.dialog-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--vlt-rule);
+  background: var(--vlt-bg);
+}
+
+.search {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.upload {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.alt-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.search,
+.alt-input {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.search:focus,
+.alt-input:focus {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: -1px;
+  border-color: var(--vlt-nav);
+}
+
+.btn-upload {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--vlt-nav);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-upload:hover:not(:disabled) {
+  background: var(--vlt-nav-deep);
+}
+
+.btn-upload:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ── Meldungen ────────────────────────────────────────────── */
+.dialog-error {
+  padding: 10px 22px 12px;
+  background: #fff0f0;
+  border-bottom: 1px solid #f3c6c1;
+  color: #c0392b;
+  font-size: 13px;
+}
+
+.dialog-error p {
+  margin: 0;
+}
+
+/* Die Fundstellen: wo das Bild noch haengt. */
+.used-by {
+  margin: 7px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.used-by-hint {
+  margin-top: 7px !important;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.dialog-note {
+  margin: 0;
+  padding: 32px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--vlt-muted);
+}
+
+/* ── Bildraster ───────────────────────────────────────────── */
+.dialog-body {
+  padding: 18px 22px 22px;
+  overflow-y: auto;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+/* Bezugsrahmen fuer Loeschknopf und Rueckfrage, die auf der Kachel liegen. */
+.cell {
+  position: relative;
+}
+
+.tile {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: var(--vlt-nav);
+  box-shadow: 0 2px 12px rgba(47, 47, 127, 0.14);
+}
+
+.tile img {
+  display: block;
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  background: var(--vlt-card);
+}
+
+.tile-meta {
+  display: block;
+  padding: 8px 10px 10px;
+}
+
+.tile-alt {
+  display: block;
+  font-size: 12px;
+  color: var(--vlt-text);
+  /* Lange Dateinamen duerfen die Kachel nicht auseinanderziehen. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-size {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  color: var(--vlt-muted);
+}
+
+/* ── Löschen ──────────────────────────────────────────────── */
+.tile-del,
+.tile-lock {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  color: var(--vlt-muted);
+  line-height: 0;
+}
+
+.tile-del {
+  cursor: pointer;
+  /* Erst beim Darüberfahren sichtbar: der Knopf soll nicht über jedem Bild
+     kleben, aber er darf auch nicht erst gesucht werden müssen. */
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.cell:hover .tile-del,
+.tile-del:focus-visible {
+  opacity: 1;
+}
+
+.tile-del:hover:not(:disabled) {
+  background: #c0392b;
+  color: #fff;
+}
+
+.tile-del:disabled {
+  cursor: default;
+}
+
+/* Gesperrt, weil im offenen Beitrag verwendet – immer sichtbar, sonst
+   wirkte die Kachel bloss wie eine ohne Löschknopf. */
+.tile-lock {
+  color: #97671a;
+  background: #fdf1dc;
+}
+
+.tile-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.18);
+  border-top-color: var(--vlt-nav);
+  border-radius: 50%;
+  animation: tile-spin 0.7s linear infinite;
+}
+
+@keyframes tile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Bei reduzierter Bewegung kein Kreisel, sondern ein ruhiges Pulsieren. */
+@media (prefers-reduced-motion: reduce) {
+  .tile-spinner {
+    animation: none;
+    border-top-color: var(--vlt-muted);
+  }
+}
+
+/* ── Rückfrage auf der Kachel ─────────────────────────────── */
+.tile-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: inset 0 0 0 2px #c0392b;
+  text-align: center;
+}
+
+.tile-confirm p {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--vlt-text);
+}
+
+.tile-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.mini {
+  padding: 5px 10px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vlt-text);
+  cursor: pointer;
+}
+
+.mini:hover {
+  background: var(--vlt-bg);
+}
+
+.mini-danger {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
+.mini-danger:hover {
+  background: #a93226;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .backdrop {
+    padding: 0;
+  }
+
+  .dialog {
+    max-height: 100vh;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .upload {
+    flex-wrap: wrap;
+  }
+}

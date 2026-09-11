@@ -1,8 +1,27 @@
 {
+  "_hinweis": [
+    "Weiterleitungen fuer 'ng serve'. Ohne sie liefe die Entwicklung nur mit",
+    "lokalem PHP und lokaler Datenbank.",
+    "",
+    "/api            Die Schnittstelle liegt auf dem echten Server.",
+    "/medien/uploads Bilder, die im CMS hochgeladen werden, landen ueber den",
+    "                Proxy auf dem echten Server. Der Browser fragt sie danach",
+    "                unter der gleichen Adresse an - und wuerde sie ohne diese",
+    "                Zeile bei localhost:4200 suchen, wo es sie nicht gibt.",
+    "                Bewusst nur 'uploads': der uebrige Medienbestand liegt in",
+    "                public/medien/ und soll weiter lokal ausgeliefert werden."
+  ],
+
   "/api": {
     "target": "https://verband-technologie.ch",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+
+  "/medien/uploads": {
+    "target": "https://verband-technologie.ch",
+    "secure": true,
+    "changeOrigin": true
   }
 }

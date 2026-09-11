@@ -1,0 +1,363 @@
+<div class="editor">
+
+  <!-- ── Kopfleiste ────────────────────────────────────────── -->
+  <header class="bar">
+    <button type="button" class="back" (click)="back()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+      Beiträge
+    </button>
+
+    <div class="bar-state">
+      <span class="badge" [class.badge-draft]="status() === 'draft'">
+        {{ status() === 'published' ? 'Veröffentlicht' : 'Entwurf' }}
+      </span>
+      @if (dirty()) {
+        <span class="dirty">Nicht gespeichert</span>
+      } @else if (notice()) {
+        <span class="saved" aria-live="polite">{{ notice() }}</span>
+      }
+    </div>
+
+    <div class="bar-actions">
+      @if (!isNew() && status() === 'published') {
+        <a [href]="'/beitraege/' + slug()" target="_blank" rel="noopener" class="btn-plain">Ansehen</a>
+      }
+      <button type="button" class="btn-plain" (click)="save('draft')" [disabled]="saving() || loading()">
+        Als Entwurf speichern
+      </button>
+      <button type="button" class="btn-main" (click)="save('published')" [disabled]="saving() || loading()">
+        {{ saving() ? 'Wird gespeichert …' : 'Veröffentlichen' }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="note" aria-live="polite">Beitrag wird geladen …</p>
+  } @else {
+
+    <div class="columns">
+
+      <!-- ── Bausteinleiste ────────────────────────────────── -->
+      <aside class="palette" aria-labelledby="palette-title">
+        <p class="col-title" id="palette-title">Bausteine</p>
+        <p class="col-hint">In den Beitrag ziehen oder anklicken zum Anhängen.</p>
+
+        <ul class="palette-list">
+          @for (type of types; track type.kind) {
+            <li>
+              <button
+                type="button"
+                class="palette-item"
+                draggable="true"
+                (dragstart)="startNew(type.kind, $event)"
+                (dragend)="endDrag()"
+                (click)="addBlock(type.kind)"
+                [attr.aria-label]="type.label + ' anhängen'"
+              >
+                <span class="palette-grip" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+                    <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                    <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                  </svg>
+                </span>
+                <span class="palette-text">
+                  <strong>{{ type.label }}</strong>
+                  <span>{{ type.hint }}</span>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </aside>
+
+      <!-- ── Beitrag ───────────────────────────────────────── -->
+      <main class="canvas" [class.is-dragging]="drag() !== null">
+        <div class="field">
+          <label for="post-title">Titel</label>
+          <input
+            id="post-title"
+            class="title-input"
+            type="text"
+            [(ngModel)]="title"
+            (ngModelChange)="onTitleChange($event)"
+            placeholder="Titel des Beitrags"
+            maxlength="255"
+          />
+        </div>
+
+        <div class="field">
+          <label for="post-excerpt">Anrisstext</label>
+          <textarea
+            id="post-excerpt"
+            rows="2"
+            [(ngModel)]="excerpt"
+            (ngModelChange)="touch()"
+            placeholder="Kurze Zusammenfassung für die Übersichtskarte …"
+            maxlength="2000"
+          ></textarea>
+        </div>
+
+        <p class="blocks-label">Inhalt</p>
+
+        <!-- Ablegestelle ganz oben. Die Stellen sind im Ruhezustand schmal
+             und wachsen, sobald etwas gezogen wird – so sind sie leicht zu
+             treffen, ohne sonst Platz zu fressen. -->
+        <div
+          class="zone"
+          [class.active]="dropIndex() === 0"
+          (dragover)="overZone(0, $event)"
+          (drop)="dropAt(0, $event)"
+        ></div>
+
+        @for (block of blocks(); track block.uid; let i = $index, last = $last) {
+          <article
+            class="block"
+            [class.is-empty]="empty(block)"
+            [attr.draggable]="handle() === block.uid"
+            (dragstart)="startMove(block.uid, $event)"
+            (dragend)="endDrag()"
+          >
+            <div class="block-head">
+              <!-- Der Griff schaltet das Ziehen frei; ohne ihn bliebe der
+                   Block stehen und man könnte im Text markieren. -->
+              <span
+                class="grip"
+                (mousedown)="handle.set(block.uid)"
+                (mouseup)="handle.set(null)"
+                aria-hidden="true"
+                title="Zum Verschieben ziehen"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+                  <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                  <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                </svg>
+              </span>
+
+              <span class="block-kind">{{ type(block.kind).label }}</span>
+              <span class="block-summary">{{ summary(block) }}</span>
+
+              <span class="block-tools">
+                <button
+                  type="button"
+                  class="tool"
+                  (click)="move(block.uid, -1)"
+                  [disabled]="i === 0"
+                  [attr.aria-label]="type(block.kind).label + ' nach oben'"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="tool"
+                  (click)="move(block.uid, 1)"
+                  [disabled]="last"
+                  [attr.aria-label]="type(block.kind).label + ' nach unten'"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="tool tool-danger"
+                  (click)="removeBlock(block.uid)"
+                  [attr.aria-label]="type(block.kind).label + ' entfernen'"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+
+            <div class="block-body">
+              <!-- Bildplätze: so viele, wie die Art vorsieht. -->
+              @if (type(block.kind).images > 0) {
+                <div class="slots" [class.slots-pair]="type(block.kind).images === 2">
+                  @for (image of block.images; track $index; let slot = $index) {
+                    <div class="slot">
+                      @if (image) {
+                        <img [src]="image.src" [alt]="image.alt" />
+                        <div class="slot-bar">
+                          <span class="slot-alt">{{ image.alt || 'Ohne Bildtext' }}</span>
+                          <button type="button" class="slot-btn" (click)="openBlockPicker(block.uid, slot)">
+                            Ersetzen
+                          </button>
+                          <button type="button" class="slot-btn" (click)="clearBlockImage(block.uid, slot)">
+                            Entfernen
+                          </button>
+                        </div>
+                      } @else {
+                        <button type="button" class="slot-empty" (click)="openBlockPicker(block.uid, slot)">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                          Bild wählen
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (type(block.kind).multiline) {
+                <textarea
+                  class="block-text"
+                  [class.is-quote]="block.kind === 'quote'"
+                  rows="4"
+                  [ngModel]="block.text"
+                  (ngModelChange)="setText(block.uid, $event)"
+                  [attr.placeholder]="type(block.kind).placeholder"
+                  [attr.aria-label]="type(block.kind).label"
+                ></textarea>
+              } @else {
+                <input
+                  type="text"
+                  class="block-text"
+                  [class.is-heading]="block.kind === 'heading'"
+                  [ngModel]="block.text"
+                  (ngModelChange)="setText(block.uid, $event)"
+                  [attr.placeholder]="type(block.kind).placeholder"
+                  [attr.aria-label]="type(block.kind).label"
+                />
+              }
+            </div>
+          </article>
+
+          <div
+            class="zone"
+            [class.active]="dropIndex() === i + 1"
+            (dragover)="overZone(i + 1, $event)"
+            (drop)="dropAt(i + 1, $event)"
+          ></div>
+        }
+
+        @if (blocks().length === 0) {
+          <div
+            class="canvas-empty"
+            [class.active]="dropIndex() === 0"
+            (dragover)="overZone(0, $event)"
+            (drop)="dropAt(0, $event)"
+          >
+            <p>Noch kein Inhalt.</p>
+            <p class="canvas-empty-hint">
+              Ziehen Sie einen Baustein aus der Leiste hierher – oder klicken Sie ihn dort an.
+            </p>
+          </div>
+        }
+      </main>
+
+      <!-- ── Einstellungen ─────────────────────────────────── -->
+      <aside class="meta" aria-labelledby="meta-title">
+        <p class="col-title" id="meta-title">Einstellungen</p>
+
+        <div class="field">
+          <span class="field-label" id="cover-label">Titelbild</span>
+          <div class="cover" role="group" aria-labelledby="cover-label">
+            @if (cover(); as image) {
+              <img [src]="image.src" [alt]="image.alt" />
+              <div class="cover-actions">
+                <button type="button" class="link-btn" (click)="openCoverPicker()">Ersetzen</button>
+                <button type="button" class="link-btn" (click)="clearCover()">Entfernen</button>
+              </div>
+            } @else {
+              <button type="button" class="cover-empty" (click)="openCoverPicker()">
+                Titelbild wählen
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="post-date">Datum</label>
+          <input id="post-date" type="date" [(ngModel)]="date" (ngModelChange)="touch()" />
+        </div>
+
+        <div class="field">
+          <label for="post-category">Hauptkategorie</label>
+          <select id="post-category" [(ngModel)]="categoryId" (ngModelChange)="touch()">
+            <option [ngValue]="null">– keine –</option>
+            @for (category of categories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+          <p class="field-hint">Steht auf der Karte in der Übersicht.</p>
+        </div>
+
+        @if (categories().length > 0) {
+          <fieldset class="field checks">
+            <legend>Weitere Kategorien</legend>
+            <p class="field-hint">Der Beitrag ist auch unter diesen zu finden.</p>
+            @for (category of categories(); track category.id) {
+              @if (category.id !== categoryId) {
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    [checked]="hasCategory(category.id)"
+                    (change)="toggleCategory(category.id, $any($event.target).checked)"
+                  />
+                  {{ category.name }}
+                </label>
+              }
+            }
+          </fieldset>
+        }
+
+        <div class="field">
+          <label for="post-author">Autor</label>
+          <input
+            id="post-author"
+            type="text"
+            [(ngModel)]="author"
+            (ngModelChange)="touch()"
+            placeholder="Optional"
+            maxlength="120"
+          />
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="address-label">Adresse</span>
+          <p class="address" aria-labelledby="address-label">
+            /beitraege/{{ slugPreview() || '…' }}
+          </p>
+          <p class="field-hint">
+            Entsteht aus dem Titel. Die endgültige Adresse vergibt der Server beim Speichern.
+          </p>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="status-label">Status</span>
+          <div class="status-toggle" role="group" aria-labelledby="status-label">
+            <button type="button" [class.active]="status() === 'draft'" (click)="setStatus('draft')">
+              Entwurf
+            </button>
+            <button type="button" [class.active]="status() === 'published'" (click)="setStatus('published')">
+              Öffentlich
+            </button>
+          </div>
+          <p class="field-hint">Entwürfe sind auf der Website nicht sichtbar.</p>
+        </div>
+      </aside>
+    </div>
+  }
+</div>
+
+@if (picker()) {
+  <app-media-picker
+    [usedIds]="usedImageIds()"
+    (chosen)="onImageChosen($event)"
+    (closed)="closePicker()"
+  />
+}

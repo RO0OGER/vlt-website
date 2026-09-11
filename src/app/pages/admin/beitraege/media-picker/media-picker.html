@@ -1,0 +1,155 @@
+<!-- Der Hintergrund ist reine Abdunklung. Geschlossen wird mit dem Kreuz
+     oder mit Escape – ein Klick daneben soll die Auswahl nicht wegnehmen,
+     wenn man nur danebengetroffen hat. -->
+<div class="backdrop">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="picker-title"
+    tabindex="-1"
+    #panel
+    (keydown)="onKeydown($event)"
+  >
+    <header class="dialog-head">
+      <div>
+        <h2 id="picker-title">Bild wählen</h2>
+        <p class="dialog-sub">Aus dem Bestand oder neu hochladen.</p>
+      </div>
+      <button type="button" class="icon-btn" (click)="close()" aria-label="Schliessen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="dialog-tools">
+      <label class="sr-only" for="picker-search">Bilder durchsuchen</label>
+      <input
+        id="picker-search"
+        type="search"
+        class="search"
+        placeholder="Suchen nach Bildtext oder Dateiname …"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearch($event)"
+        autocomplete="off"
+      />
+
+      <div class="upload">
+        <label class="sr-only" for="picker-alt">Bildtext für den Upload</label>
+        <input
+          id="picker-alt"
+          type="text"
+          class="alt-input"
+          placeholder="Bildtext (für Screenreader)"
+          [(ngModel)]="uploadAlt"
+          [disabled]="uploading()"
+          maxlength="255"
+        />
+        <button type="button" class="btn-upload" (click)="pickFile()" [disabled]="uploading()">
+          @if (uploading()) {
+            Wird hochgeladen …
+          } @else {
+            Bild hochladen
+          }
+        </button>
+        <!-- Das echte Dateifeld bleibt verborgen: der Knopf daneben sieht
+             aus wie der Rest der Oberfläche, das Systemfeld nicht. -->
+        <input
+          #fileInput
+          type="file"
+          class="sr-only"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          (change)="onFile($event)"
+        />
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="dialog-error" role="alert">
+        <p>{{ error() }}</p>
+        @if (usedBy().length) {
+          <ul class="used-by">
+            @for (stelle of usedBy(); track stelle) {
+              <li>{{ stelle }}</li>
+            }
+          </ul>
+          <p class="used-by-hint">
+            Entfernen Sie das Bild zuerst an diesen Stellen, danach lässt es sich löschen.
+          </p>
+        }
+      </div>
+    }
+
+    <div class="dialog-body">
+      @if (loading()) {
+        <p class="dialog-note" aria-live="polite">Bilder werden geladen …</p>
+      } @else if (visible().length === 0) {
+        <p class="dialog-note">
+          @if (media().length === 0) {
+            Es sind noch keine Bilder vorhanden. Laden Sie oben das erste hoch.
+          } @else {
+            Kein Bild passt zu dieser Suche.
+          }
+        </p>
+      } @else {
+        <ul class="grid">
+          @for (image of visible(); track image.id) {
+            <!-- Wählen und Löschen sind Geschwister, nicht ineinander:
+                 ein Knopf im Knopf ist kein gültiges HTML und wäre mit der
+                 Tastatur nicht erreichbar. -->
+            <li class="cell">
+              <button type="button" class="tile" (click)="choose(image)">
+                <img [src]="image.src" [alt]="image.alt" loading="lazy" />
+                <span class="tile-meta">
+                  <span class="tile-alt">{{ image.alt || image.path }}</span>
+                  @if (dimensions(image); as size) {
+                    <span class="tile-size">{{ size }}</span>
+                  }
+                </span>
+              </button>
+
+              @if (inOpenPost(image)) {
+                <span class="tile-lock" title="Wird im offenen Beitrag verwendet">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="tile-del"
+                  (click)="askDelete(image)"
+                  [disabled]="deleting() !== null"
+                  [attr.aria-label]="'Bild ' + (image.alt || image.path) + ' löschen'"
+                >
+                  @if (deleting() === image.id) {
+                    <span class="tile-spinner" aria-hidden="true"></span>
+                  } @else {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  }
+                </button>
+              }
+
+              <!-- Rückfrage direkt auf der Kachel: ein zweites Fenster über
+                   dem Auswahlfenster wäre eine Ebene zu viel. -->
+              @if (pending()?.id === image.id) {
+                <div class="tile-confirm">
+                  <p>Endgültig löschen?</p>
+                  <div class="tile-confirm-actions">
+                    <button type="button" class="mini mini-danger" (click)="confirmDelete()">Löschen</button>
+                    <button type="button" class="mini" (click)="cancelDelete()">Abbrechen</button>
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</div>

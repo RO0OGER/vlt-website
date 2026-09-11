@@ -54,35 +54,69 @@
       <div class="sections">
         @for (s of sections(); track $index) {
           <section class="section">
-            <p class="section-text">{{ s.text }}</p>
-
-            @if (images(s); as imgs) {
-              @if (imgs.length) {
-                <div class="section-images" [class.is-pair]="imgs.length === 2">
-                  @for (img of imgs; track $index) {
-                    @if (img.src) {
-                      <img
-                        class="section-img"
-                        [src]="img.src"
-                        [alt]="img.alt"
-                        [style.aspect-ratio]="1 / img.ratio"
-                        loading="lazy"
-                      />
-                    } @else {
-                      <div
-                        class="section-img section-img-empty"
-                        [style.aspect-ratio]="1 / img.ratio"
-                      >
-                        <span class="img-cap">[ {{ img.alt }} ]</span>
-                      </div>
-                    }
-                  }
-                </div>
+            <!-- Die Art des Bausteins entscheidet ueber das Element: ein
+                 Zwischentitel gliedert auch fuer Screenreader, ein Zitat
+                 ist eines. Bei Bildbausteinen steht der Text als Legende
+                 unter dem Bild, sonst als Absatz darueber. -->
+            @switch (s.kind) {
+              @case ('heading') {
+                <h2 class="section-heading">{{ s.text }}</h2>
+              }
+              @case ('quote') {
+                <blockquote class="section-quote">{{ s.text }}</blockquote>
+              }
+              @case ('image') {
+                <ng-container *ngTemplateOutlet="bilder; context: { $implicit: s }" />
+                @if (s.text) {
+                  <p class="section-caption">{{ s.text }}</p>
+                }
+              }
+              @case ('gallery') {
+                <ng-container *ngTemplateOutlet="bilder; context: { $implicit: s }" />
+                @if (s.text) {
+                  <p class="section-caption">{{ s.text }}</p>
+                }
+              }
+              @default {
+                @if (s.text) {
+                  <p class="section-text">{{ s.text }}</p>
+                }
+                <ng-container *ngTemplateOutlet="bilder; context: { $implicit: s }" />
               }
             }
           </section>
         }
       </div>
+
+      <!-- Die Bilder eines Abschnitts. Einmal beschrieben, von allen Arten
+           benutzt – so sieht ein Bild ueberall gleich aus, egal ob es zu
+           einem Bildbaustein oder zu einem Textabschnitt gehoert. -->
+      <ng-template #bilder let-s>
+        @if (images(s); as imgs) {
+          @if (imgs.length) {
+            <div class="section-images" [class.is-pair]="imgs.length === 2">
+              @for (img of imgs; track $index) {
+                @if (img.src) {
+                  <img
+                    class="section-img"
+                    [src]="img.src"
+                    [alt]="img.alt"
+                    [style.aspect-ratio]="1 / img.ratio"
+                    loading="lazy"
+                  />
+                } @else {
+                  <div
+                    class="section-img section-img-empty"
+                    [style.aspect-ratio]="1 / img.ratio"
+                  >
+                    <span class="img-cap">[ {{ img.alt }} ]</span>
+                  </div>
+                }
+              }
+            </div>
+          }
+        }
+      </ng-template>
 
       <div class="foot">
         <a routerLink="/beitraege" class="foot-link">

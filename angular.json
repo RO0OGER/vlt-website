@@ -39,6 +39,11 @@
                 "glob": ".htaccess",
                 "input": "public",
                 "output": "/"
+              },
+              {
+                "glob": ".htaccess",
+                "input": "public/medien",
+                "output": "/medien"
               }
             ],
             "styles": [

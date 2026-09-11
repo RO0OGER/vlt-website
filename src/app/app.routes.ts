@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, loginGuard } from './shared/auth.guard';
+import { authGuard, loginGuard, passwordGuard } from './shared/auth.guard';
 
 /**
  * Statische Routen des Verbands-Auftritts.
@@ -141,6 +141,19 @@ export const routes: Routes = [
         canActivate: [loginGuard],
       },
       {
+        /*
+         * Ausserhalb der Admin-Huelle und mit eigenem Waechter: solange das
+         * verteilte Startpasswort gilt, weist die API alles unter /api/admin/
+         * ab. Eine Seitenleiste, deren Verweise alle hierher zurueckfuehren,
+         * waere nur verwirrend.
+         */
+        path: 'passwort',
+        loadComponent: () =>
+          import('./pages/admin/passwort/passwort').then((m) => m.Passwort),
+        title: 'Passwort – VLT Admin',
+        canActivate: [passwordGuard],
+      },
+      {
         path: '',
         loadComponent: () =>
           import('./pages/admin/shell/admin-shell').then((m) => m.AdminShell),
@@ -152,6 +165,37 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./pages/admin/dashboard/dashboard').then((m) => m.Dashboard),
             title: 'Dashboard – VLT Admin',
+          },
+          {
+            path: 'beitraege',
+            loadComponent: () =>
+              import('./pages/admin/beitraege/beitraege-admin').then((m) => m.BeitraegeAdmin),
+            title: 'Beiträge – VLT Admin',
+          },
+          {
+            /*
+             * "neu" und eine Nummer teilen sich dieselbe Route: der Editor
+             * arbeitet in beiden Faellen gleich, nur ohne Nummer legt er
+             * beim ersten Speichern an statt zu aendern. Eine eigene Route
+             * fuer das Anlegen waere dieselbe Komponente mit demselben
+             * Zustand – nur an zwei Stellen gepflegt.
+             */
+            path: 'beitraege/:id',
+            loadComponent: () =>
+              import('./pages/admin/beitraege/editor/beitrag-editor').then((m) => m.BeitragEditor),
+            title: 'Beitrag bearbeiten – VLT Admin',
+          },
+          {
+            path: 'kategorien',
+            loadComponent: () =>
+              import('./pages/admin/kategorien/kategorien').then((m) => m.Kategorien),
+            title: 'Kategorien – VLT Admin',
+          },
+          {
+            path: 'benutzer',
+            loadComponent: () =>
+              import('./pages/admin/benutzer/benutzer').then((m) => m.Benutzer),
+            title: 'Zugänge – VLT Admin',
           },
         ],
       },

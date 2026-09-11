@@ -1,0 +1,127 @@
+<div class="page">
+
+  <header class="page-head">
+    <div>
+      <h1>Zugänge</h1>
+      <p class="page-sub">Wer sich am CMS anmelden darf.</p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  <!-- ── Startpasswort: erscheint genau einmal ──────────────── -->
+  @if (created(); as user) {
+    <section class="secret" aria-labelledby="secret-title">
+      <h2 id="secret-title">Zugang angelegt: {{ user.email }}</h2>
+      <p class="secret-lead">
+        Geben Sie dieses Startpasswort weiter. Es wird <strong>nur jetzt</strong> angezeigt –
+        gespeichert ist nur eine unumkehrbare Prüfsumme. Beim ersten Anmelden muss es
+        ersetzt werden.
+      </p>
+
+      <div class="secret-row">
+        <code class="secret-code">{{ user.password }}</code>
+        <button type="button" class="secret-copy" (click)="copyPassword()">
+          {{ copied() ? 'Kopiert' : 'Kopieren' }}
+        </button>
+      </div>
+
+      <p class="secret-note">
+        Schicken Sie es über einen Kanal, den nur die betreffende Person liest, und
+        nicht zusammen mit der Adresse im selben Verlauf.
+      </p>
+
+      <button type="button" class="secret-done" (click)="dismissPassword()">
+        Habe ich weitergegeben
+      </button>
+    </section>
+  }
+
+  <!-- ── Neuer Zugang ───────────────────────────────────────── -->
+  <form class="new-user" (ngSubmit)="create()" novalidate>
+    <div class="new-user-field">
+      <label for="new-email">Neuer Zugang</label>
+      <input
+        id="new-email"
+        type="email"
+        name="email"
+        [(ngModel)]="email"
+        placeholder="vorname.name@beispiel.ch"
+        autocomplete="off"
+        [disabled]="creating()"
+        maxlength="190"
+      />
+    </div>
+    <button type="submit" class="btn-new" [disabled]="creating() || !email.trim()">
+      {{ creating() ? 'Wird angelegt …' : 'Anlegen' }}
+    </button>
+  </form>
+
+  <!-- ── Liste ──────────────────────────────────────────────── -->
+  @if (loading()) {
+    <p class="note" aria-live="polite">Zugänge werden geladen …</p>
+  } @else {
+    <ul class="list">
+      @for (user of users(); track user.id) {
+        <li class="row">
+          <div class="row-main">
+            <p class="row-email">
+              {{ user.email }}
+              @if (user.self) {
+                <span class="tag">Sie</span>
+              }
+              @if (user.protected) {
+                <span class="tag tag-lock">Geschützt</span>
+              }
+              @if (user.mustChangePassword) {
+                <span class="tag tag-warn">Startpasswort aktiv</span>
+              }
+            </p>
+            <p class="row-meta">Angelegt am {{ dateLabel(user.createdAt) }}</p>
+          </div>
+
+          @if (user.protected) {
+            <span class="row-hint">Kann nicht gelöscht werden</span>
+          } @else if (user.self) {
+            <span class="row-hint">Eigener Zugang</span>
+          } @else {
+            <button type="button" class="action action-danger" (click)="askDelete(user)">
+              Löschen
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<!-- ── Rückfrage vor dem Löschen ───────────────────────────── -->
+@if (confirming(); as user) {
+  <div class="backdrop">
+    <div
+      class="confirm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      tabindex="-1"
+      #panel
+      (keydown)="onConfirmKeydown($event)"
+    >
+      <h2 id="confirm-title">Zugang löschen?</h2>
+      <p>
+        {{ user.email }} kann sich danach nicht mehr anmelden, auch offene Sitzungen
+        enden sofort. Beiträge, die diese Person verfasst hat, bleiben bestehen.
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-plain" (click)="cancelDelete()" [disabled]="deleting()">
+          Abbrechen
+        </button>
+        <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting()">
+          {{ deleting() ? 'Wird gelöscht …' : 'Endgültig löschen' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,136 @@
+<div class="page">
+
+  <header class="page-head">
+    <div>
+      <h1>Beiträge</h1>
+      <p class="page-sub">Erstellen, bearbeiten und veröffentlichen.</p>
+    </div>
+    <a routerLink="/admin/beitraege/neu" class="btn-new">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      Neuer Beitrag
+    </a>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">
+      {{ error() }}
+      <button type="button" class="alert-retry" (click)="load()">Erneut versuchen</button>
+    </p>
+  }
+
+  <!-- ── Filter ────────────────────────────────────────────── -->
+  <div class="tools">
+    <div class="tabs" role="group" aria-label="Nach Status filtern">
+      <button type="button" [class.active]="status() === 'all'" (click)="setStatus('all')">
+        Alle <span class="count">{{ counts().all }}</span>
+      </button>
+      <button type="button" [class.active]="status() === 'published'" (click)="setStatus('published')">
+        Veröffentlicht <span class="count">{{ counts().published }}</span>
+      </button>
+      <button type="button" [class.active]="status() === 'draft'" (click)="setStatus('draft')">
+        Entwürfe <span class="count">{{ counts().draft }}</span>
+      </button>
+    </div>
+
+    <label class="sr-only" for="post-search">Beiträge durchsuchen</label>
+    <input
+      id="post-search"
+      type="search"
+      class="search"
+      placeholder="Titel, Adresse oder Kategorie …"
+      [(ngModel)]="search"
+      (ngModelChange)="onSearch($event)"
+      autocomplete="off"
+    />
+  </div>
+
+  <!-- ── Liste ─────────────────────────────────────────────── -->
+  @if (loading()) {
+    <p class="note" aria-live="polite">Beiträge werden geladen …</p>
+  } @else if (visible().length === 0) {
+    <div class="empty">
+      @if (posts().length === 0) {
+        <p class="empty-title">Noch keine Beiträge</p>
+        <p class="empty-text">Legen Sie den ersten Beitrag an – er lässt sich zuerst als Entwurf speichern.</p>
+        <a routerLink="/admin/beitraege/neu" class="btn-new">Neuer Beitrag</a>
+      } @else {
+        <p class="empty-title">Kein Treffer</p>
+        <p class="empty-text">Zu dieser Suche passt kein Beitrag.</p>
+      }
+    </div>
+  } @else {
+    <ul class="list">
+      @for (post of visible(); track post.id) {
+        <li class="row">
+          <div class="row-cover" aria-hidden="true">
+            @if (post.cover?.src; as src) {
+              <img [src]="src" [alt]="" loading="lazy" />
+            } @else {
+              <span class="cover-empty">–</span>
+            }
+          </div>
+
+          <div class="row-main">
+            <a class="row-title" [routerLink]="['/admin/beitraege', post.id]">{{ post.title }}</a>
+            <p class="row-meta">
+              <span class="badge" [class.badge-draft]="post.status === 'draft'">
+                {{ post.status === 'published' ? 'Veröffentlicht' : 'Entwurf' }}
+              </span>
+              <time [attr.datetime]="post.date">{{ dateLabel(post.date) }}</time>
+              @if (post.category) {
+                <span aria-hidden="true">·</span>
+                <span>{{ post.category }}</span>
+              }
+              <span aria-hidden="true">·</span>
+              <span>{{ post.blockCount }} Bausteine</span>
+            </p>
+            <p class="row-slug">/beitraege/{{ post.slug }}</p>
+          </div>
+
+          <div class="row-actions">
+            <a [routerLink]="['/admin/beitraege', post.id]" class="action">Bearbeiten</a>
+            @if (post.status === 'published') {
+              <!-- Auf die oeffentliche Seite, nicht ins CMS: hier will man
+                   sehen, was die Besucher sehen. -->
+              <a [href]="'/beitraege/' + post.slug" target="_blank" rel="noopener" class="action">Ansehen</a>
+            }
+            <button type="button" class="action action-danger" (click)="askDelete(post)">Löschen</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<!-- ── Rückfrage vor dem Löschen ───────────────────────────── -->
+@if (confirming(); as post) {
+  <!-- Kein Schliessen per Klick daneben: beim Löschen soll nur zählen, was
+       ausdrücklich angeklickt wurde. Escape bricht ab. -->
+  <div class="backdrop">
+    <div
+      class="confirm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      tabindex="-1"
+      #panel
+      (keydown)="onConfirmKeydown($event)"
+    >
+      <h2 id="confirm-title">Beitrag löschen?</h2>
+      <p>
+        «{{ post.title }}» wird mit allen Bausteinen entfernt. Das lässt sich nicht
+        rückgängig machen. Die verwendeten Bilder bleiben im Bestand.
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-plain" (click)="cancelDelete()" [disabled]="deleting()">
+          Abbrechen
+        </button>
+        <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting()">
+          {{ deleting() ? 'Wird gelöscht …' : 'Endgültig löschen' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

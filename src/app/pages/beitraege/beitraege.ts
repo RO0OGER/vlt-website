@@ -43,10 +43,17 @@ export class Beitraege {
     });
   }
 
-  /** Kategorien aus den geladenen Beitraegen, nicht fest im Template. */
+  /**
+   * Kategorien aus den geladenen Beitraegen, nicht fest im Template.
+   *
+   * Aus allen Kategorien je Beitrag, nicht nur aus der Hauptkategorie:
+   * sonst fehlten in der Leiste genau die Rubriken, die nirgends
+   * Hauptkategorie sind – "Verband" etwa gehoert zu 24 Beitraegen, ist aber
+   * nur bei einem einzigen die Hauptkategorie.
+   */
   readonly categories = computed(() => [
     ALL_CATEGORIES,
-    ...[...new Set(this.posts().map((p) => p.cat))].sort((a, b) => a.localeCompare(b, 'de')),
+    ...[...new Set(this.posts().flatMap((p) => p.cats))].sort((a, b) => a.localeCompare(b, 'de')),
   ]);
 
   readonly filtered = computed<PostCard[]>(() => {
@@ -54,7 +61,9 @@ export class Beitraege {
     const cat = this.category();
     return this.posts().filter(
       (p) =>
-        (cat === ALL_CATEGORIES || p.cat === cat) &&
+        // Ein Beitrag zaehlt zu jeder seiner Kategorien, nicht nur zur
+        // Hauptkategorie.
+        (cat === ALL_CATEGORIES || p.cats.includes(cat)) &&
         (q === '' ||
           p.title.toLowerCase().includes(q) ||
           p.excerpt.toLowerCase().includes(q)),

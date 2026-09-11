@@ -1,0 +1,155 @@
+:host {
+  display: block;
+}
+
+/* Gleiche Anmutung wie die Anmeldeseite: wer hier landet, ist noch nicht
+   im CMS drin, und das soll man sehen. */
+.pw-page {
+  min-height: 100vh;
+  background: var(--vlt-nav);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.pw-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.pw-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vlt-muted);
+  margin-bottom: 26px;
+}
+
+.pw-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vlt-primary);
+  flex-shrink: 0;
+}
+
+.pw-title {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vlt-text);
+}
+
+.pw-sub {
+  margin: 0 0 26px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--vlt-muted);
+}
+
+.pw-error {
+  background: #fff0f0;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #c0392b;
+  margin-bottom: 20px;
+}
+
+/* ── Felder ───────────────────────────────────────────────── */
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vlt-text);
+}
+
+.field input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 11px 13px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--vlt-text);
+}
+
+.field input:focus {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: -1px;
+  border-color: var(--vlt-nav);
+}
+
+.field-hint,
+.field-warn {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.field-hint {
+  color: var(--vlt-muted);
+}
+
+.field-warn {
+  color: #97671a;
+}
+
+/* ── Knöpfe ───────────────────────────────────────────────── */
+.pw-btn {
+  width: 100%;
+  padding: 13px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--vlt-nav);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.pw-btn:hover:not(:disabled) {
+  background: var(--vlt-nav-deep);
+}
+
+.pw-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pw-logout {
+  display: block;
+  margin: 18px auto 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--vlt-muted);
+  cursor: pointer;
+}
+
+.pw-logout:hover {
+  background: var(--vlt-bg);
+  color: var(--vlt-text);
+}
