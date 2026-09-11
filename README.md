@@ -73,3 +73,20 @@ Beitrags- und Galerieseiten bleiben leer.
 weiter. Für den Browser bleibt alles dieselbe Herkunft, die API braucht also
 keine CORS-Kopfzeilen. Zieht die API auf eine andere Domain um, wird das Ziel
 dort angepasst.
+
+Dasselbe gilt für `/medien/...`. In `public/medien/` liegt nur der Bestand,
+der beim Umzug von WordPress mitgekommen ist – alles, was danach dazukommt,
+liegt ausschliesslich auf cyon: Bilder, die im CMS hochgeladen werden
+(`medien/uploads/<Jahr>/`), und solche, die von Hand auf den Server gelegt
+werden. Ohne die Weiterleitung fallen genau diese Anfragen in die
+Auffangregel darunter und liefern `index.html` mit Status 200 zurück. Im
+Netzwerk-Tab sieht das nach einem geladenen Bild aus, der Browser bekommt
+aber HTML und zeigt ein defektes Bild.
+
+Vercel prüft zuerst das Dateisystem und wendet die Umschreibungen erst
+danach an. Bilder aus `public/medien/` kommen also weiterhin direkt aus der
+Bereitstellung; nur was dort fehlt, wird bei cyon geholt.
+
+Beim `ng serve` erledigt `proxy.conf.json` dasselbe, dort allerdings nur für
+`/medien/uploads`. Ein Bild, das jemand direkt auf den Server legt, ohne es
+ins Repository aufzunehmen, fehlt lokal deshalb weiterhin.

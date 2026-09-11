@@ -6,6 +6,10 @@
       "destination": "https://verband-technologie.ch/api/:path*"
     },
     {
+      "source": "/medien/:path*",
+      "destination": "https://verband-technologie.ch/medien/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
