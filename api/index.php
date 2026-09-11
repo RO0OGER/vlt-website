@@ -38,8 +38,25 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Robots-Tag: noindex');
 header('X-Content-Type-Options: nosniff');
 
+/**
+ * Wie lange eine Antwort wiederverwendet werden darf.
+ *
+ * Eine Minute. Vorher waren es fuenf, und das war die falsche Abwaegung:
+ * wer im CMS etwas veroeffentlicht, sieht auf der Seite minutenlang die
+ * alte Fassung und haelt es fuer einen Fehler. Genau das ist passiert.
+ *
+ * Fuer den Server aendert sich wenig. Er schuetzt weiterhin vor dem Fall,
+ * der zaehlt – viele Aufrufe kurz hintereinander, etwa wenn ein Beitrag
+ * geteilt wird. Bei rund 60 Beitraegen und einem Verband dieser Groesse
+ * kostet eine Abfrage je Minute nichts.
+ *
+ * Die Endpunkte des CMS und der Anmeldung setzen 0 und werden nie
+ * zwischengespeichert; dort muss jede Antwort aktuell sein.
+ */
+const CACHE_SEKUNDEN = 60;
+
 /** Gibt Daten als JSON aus und beendet die Anfrage. */
-function send(array $data, int $status = 200, int $cacheSeconds = 300): void
+function send(array $data, int $status = 200, int $cacheSeconds = CACHE_SEKUNDEN): void
 {
     http_response_code($status);
     if ($status === 200 && $cacheSeconds > 0) {
