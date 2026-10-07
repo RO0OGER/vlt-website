@@ -273,12 +273,131 @@
 }
 
 /* ── Sponsoren ────────────────────────────────────────────────── */
+/* ── Kommende Events ──────────────────────────────────────────
+   Derselbe Cremeton wie die Seite /events und die Beiträge darüber.
+   Unterschieden werden die Termine durch das Datumsblatt und die orange
+   Kante an jeder Karte. */
+.events {
+  background: var(--vlt-bg);
+}
+
+.events .vlt-container {
+  padding-top: 72px;
+  padding-bottom: 80px;
+}
+
+.event-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.event-card {
+  display: flex;
+  gap: 18px;
+  height: 100%;
+  padding: 22px;
+  border: 1px solid var(--vlt-rule);
+  border-left: 4px solid var(--vlt-primary);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--vlt-text);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.event-card:hover {
+  border-color: var(--vlt-nav);
+  border-left-color: var(--vlt-primary);
+  box-shadow: 0 12px 30px -20px rgb(38 38 38 / 0.45);
+}
+
+.event-card:focus-visible {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: 2px;
+}
+
+/* Datumsblatt in der Akzentfarbe – das Erkennungszeichen eines Events. */
+.event-sheet {
+  flex-shrink: 0;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: flex-start;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--vlt-primary);
+  color: #1a1a1a;
+}
+
+.event-sheet-month {
+  width: 100%;
+  padding: 4px 0;
+  background: var(--vlt-nav);
+  color: #fff;
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.event-sheet-day {
+  padding: 6px 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.event-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-title {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.event-line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--vlt-muted);
+}
+
+.event-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-place svg {
+  flex-shrink: 0;
+  color: var(--vlt-nav);
+}
+
+.events-empty {
+  margin: 0;
+  font-size: 16px;
+  color: var(--vlt-muted);
+}
+
 .sponsors {
   background: var(--vlt-bg);
 }
 
 .sponsors .vlt-container {
-  padding-top: 24px;
+  padding-top: 88px;
   padding-bottom: 96px;
 }
 
@@ -350,6 +469,9 @@
   .post-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .event-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -382,6 +504,13 @@
     padding-top: 56px;
     padding-bottom: 56px;
   }
+  .events .vlt-container {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+  .sponsors .vlt-container {
+    padding-top: 56px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -392,6 +521,23 @@
   }
   .post-grid {
     grid-template-columns: 1fr;
+  }
+  .event-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .event-card {
+    padding: 16px;
+    gap: 14px;
+  }
+  .event-sheet {
+    width: 54px;
+  }
+  .event-sheet-day {
+    font-size: 24px;
+  }
+  .event-title {
+    font-size: 17px;
   }
   .sponsor-grid {
     grid-template-columns: repeat(2, 1fr);

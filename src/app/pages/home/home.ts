@@ -2,7 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { ContentApi } from '../../shared/content-api';
-import { PostCard, toPostCard } from '../../shared/post-view';
+import { todayIso } from '../../shared/dates';
+import { EventCard, PostCard, toEventCard, toPostCard } from '../../shared/post-view';
 import { PUBLISHERS } from '../../shared/publishers';
 
 @Component({
@@ -31,7 +32,31 @@ export class Home {
       // Startseite zu blockieren.
       error: () => this.loading.set(false),
     });
+
+    this.api.events().subscribe({
+      next: (events) => {
+        const today = todayIso();
+        this.events.set(
+          events
+            .map(toEventCard)
+            .filter((event) => event.date >= today)
+            .slice(0, 3),
+        );
+        this.eventsLoaded.set(true);
+      },
+      // Wie bei den Beitraegen: faellt die API aus, bleibt der Abschnitt
+      // weg, statt eine Fehlermeldung auf die Startseite zu setzen.
+      error: () => this.eventsLoaded.set(false),
+    });
   }
+
+  /**
+   * Die naechsten drei Events. Die API liefert alle, das frueheste zuerst;
+   * vergangene fallen hier weg – auf der Startseite zaehlt, was kommt.
+   */
+  readonly events = signal<EventCard[]>([]);
+  /** Erst nach der Antwort zeigen – sonst blitzt "kein Event" kurz auf. */
+  readonly eventsLoaded = signal(false);
 
   /** Der neuste Beitrag, gross dargestellt. */
   readonly featured = computed<PostCard | null>(() => this.posts()[0] ?? null);

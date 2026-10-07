@@ -8,23 +8,66 @@ import {
   AdminCategory,
   AdminMedia,
   AdminPostDetail,
+  MediaKind,
   PostPayload,
+  PostType,
   apiErrorText,
 } from '../../../../shared/admin-api';
 import {
+  BLOCK_MAX_DOCUMENTS,
   BLOCK_TYPES,
   BlockKind,
+  BlockPayload,
   BlockType,
   EditorBlock,
+  MAP_ZOOM_DEFAULT,
+  MAP_ZOOM_MAX,
+  MAP_ZOOM_MIN,
+  TABLE_MAX_COLUMNS,
+  TABLE_MAX_ROWS,
+  addTableColumn,
+  addTableRow,
   blockSummary,
   blockType,
   createBlock,
+  createDocument,
   isEmptyBlock,
+  removeTableColumn,
+  removeTableRow,
+  setTableCell,
   slugify,
+  tableColumns,
   toEditorBlocks,
   toPayloadBlocks,
 } from '../../../../shared/blocks';
+import { todayIso } from '../../../../shared/dates';
+import { GeoResult, Geocoder, LatLng } from '../../../../shared/map/geo';
+import { MapView } from '../../../../shared/map/map-view';
 import { MediaPicker } from '../../../../shared/media-picker/media-picker';
+
+/**
+ * Die Adresssuche eines Karten-Bausteins. Es ist immer hoechstens eine
+ * offen – die des Bausteins, in dem zuletzt gesucht wurde.
+ */
+interface GeoSearch {
+  uid: number;
+  busy: boolean;
+  results: GeoResult[];
+  /** Meldung, wenn nichts gefunden wurde oder die Suche scheiterte. */
+  message: string;
+}
+
+/**
+ * Was sich zwischen Beitrag und Event unterscheidet, soweit es nur Worte
+ * und Adressen sind. Alles Weitere fragt die Vorlage ueber isEvent() ab.
+ */
+const WORDING: Record<
+  PostType,
+  { one: string; fresh: string; list: string; admin: string; site: string }
+> = {
+  post: { one: 'Beitrag', fresh: 'Neuer Beitrag', list: 'Beiträge', admin: '/admin/beitraege', site: '/beitraege' },
+  event: { one: 'Event', fresh: 'Neues Event', list: 'Events', admin: '/admin/events', site: '/events' },
+};
 
 /**
  * Woher ein laufender Zug kommt: aus der Bausteinleiste (ein neuer Block)
@@ -32,26 +75,43 @@ import { MediaPicker } from '../../../../shared/media-picker/media-picker';
  */
 type DragSource = { type: 'new'; kind: BlockKind } | { type: 'move'; uid: number };
 
-/** Wofuer die Bildauswahl gerade offen ist. */
-type PickerTarget = { kind: 'cover' } | { kind: 'block'; uid: number; slot: number };
+/**
+ * Wofuer die Dateiauswahl gerade offen ist: das Titelbild, ein Bildplatz in
+ * einem Baustein, oder ein Dokument, das einer Download-Liste angehaengt
+ * wird. Daraus leitet sich auch ab, welchen Bestand die Auswahl zeigt.
+ */
+type PickerTarget =
+  | { kind: 'cover' }
+  | { kind: 'image'; uid: number; slot: number }
+  | { kind: 'document'; uid: number };
 
 /**
- * Block-Editor fuer Beitraege.
+ * Block-Editor fuer Beitraege und Events.
  *
  * Ein Beitrag wird hier aus Bausteinen zusammengesetzt: Text, Zwischentitel,
- * Bild, Bildpaar, Zitat. Die Bausteinleiste links laesst sich in den Beitrag
- * ziehen, bestehende Bloecke lassen sich am Griff umsortieren. Wer nicht
- * ziehen mag oder kann, kommt mit den Knoepfen genauso ans Ziel – jede
- * Zieh-Geste hat eine Entsprechung zum Anklicken.
+ * Bild, Bildpaar, Tabelle, Dokumente, Link, Karte, Zitat. Die Bausteinleiste links
+ * laesst sich in den Beitrag ziehen, bestehende Bloecke lassen sich am Griff
+ * umsortieren. Wer nicht ziehen mag oder kann, kommt mit den Knoepfen genauso
+ * ans Ziel – jede Zieh-Geste hat eine Entsprechung zum Anklicken.
+ *
+ * Welche Felder ein Baustein zeigt, entscheidet seine Beigabe (BlockPayload
+ * in blocks.ts) und nicht eine Abfrage auf die Art. So braucht eine neue Art
+ * hier nichts weiter, solange sie eine der vier bekannten Beigaben hat.
  *
  * Gespeichert wird immer der ganze Beitrag: Kopfdaten und alle Bloecke in
  * einem Aufruf. Das haelt den Zustand einfach – es gibt keinen Moment, in
  * dem die Haelfte gespeichert ist.
+ *
+ * Events benutzen denselben Editor (Route-Daten `type: 'event'`). Sie haben
+ * dieselben Bausteine, dazu Datum und Ort als Pflichtfelder und eine Karte
+ * als Pflichtbaustein. Veroeffentlichungsdatum und Autor fallen weg – bei
+ * einem Event zaehlt, wann und wo es stattfindet, nicht wer es eingetragen
+ * hat.
  */
 @Component({
   selector: 'app-beitrag-editor',
   standalone: true,
-  imports: [FormsModule, MediaPicker],
+  imports: [FormsModule, MediaPicker, MapView],
   templateUrl: './beitrag-editor.html',
   styleUrl: './beitrag-editor.css',
 })
@@ -60,8 +120,17 @@ export class BeitragEditor {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly titleService = inject(Title);
+  private readonly geocoder = inject(Geocoder);
 
   readonly types = BLOCK_TYPES;
+
+  /** Beitrag oder Event – steht in den Daten der Route. */
+  readonly kind: PostType = this.route.snapshot.data['type'] === 'event' ? 'event' : 'post';
+  readonly isEvent = this.kind === 'event';
+  readonly words = WORDING[this.kind];
+
+  readonly zoomMin = MAP_ZOOM_MIN;
+  readonly zoomMax = MAP_ZOOM_MAX;
 
   /** Nummer des Beitrags, null solange er neu ist. */
   readonly postId = signal<number | null>(null);
@@ -85,6 +154,16 @@ export class BeitragEditor {
   author = '';
   categoryId: number | null = null;
   extraCategoryIds: number[] = [];
+
+  // Nur bei Events. Datum und Ort sind Pflicht, die Zeit nicht: manches
+  // Event dauert den ganzen Tag, und eine erfundene Uhrzeit waere schlimmer
+  // als keine.
+  eventDate = '';
+  eventTime = '';
+  location = '';
+
+  /** Die offene Adresssuche eines Karten-Bausteins. */
+  readonly geo = signal<GeoSearch | null>(null);
 
   readonly status = signal<'draft' | 'published'>('draft');
 
@@ -121,15 +200,22 @@ export class BeitragEditor {
 
   readonly isNew = computed(() => this.postId() === null);
 
+  /** Welchen Bestand die Auswahl zeigt: Bilder oder Dokumente. */
+  readonly pickerKind = computed<MediaKind>(() =>
+    this.picker()?.kind === 'document' ? 'document' : 'image',
+  );
+
   /**
-   * Alle Bilder, die dieser Beitrag gerade belegt – Titelbild und Bausteine.
-   * Die Bildauswahl sperrt sie fuers Loeschen, auch wenn sie noch nicht
-   * gespeichert sind und in der Datenbank darum als frei gelten.
+   * Alle Dateien, die dieser Beitrag gerade belegt – Titelbild, Bilder in
+   * Bausteinen und Dokumente in Download-Listen. Die Auswahl sperrt sie
+   * fuers Loeschen, auch wenn sie noch nicht gespeichert sind und in der
+   * Datenbank darum als frei gelten.
    */
-  readonly usedImageIds = computed(() => {
-    const ids = this.blocks().flatMap((block) =>
-      block.images.filter((image) => image !== null).map((image) => image.id),
-    );
+  readonly usedMediaIds = computed(() => {
+    const ids = this.blocks().flatMap((block) => [
+      ...block.images.filter((image) => image !== null).map((image) => image.id),
+      ...block.documents.map((document) => document.file.id),
+    ]);
     const coverId = this.cover()?.id;
     return coverId === undefined ? ids : [...ids, coverId];
   });
@@ -140,6 +226,9 @@ export class BeitragEditor {
       .map((block, index) => ({ block, index }))
       .filter((entry) => isEmptyBlock(entry.block)),
   );
+
+  /** Hat das Event seine Pflichtkarte? Bei Beitraegen immer ja. */
+  readonly hasMap = computed(() => !this.isEvent || this.blocks().some((block) => block.kind === 'map'));
 
   constructor() {
     const param = this.route.snapshot.paramMap.get('id');
@@ -153,22 +242,23 @@ export class BeitragEditor {
     });
 
     if (id === null) {
-      this.titleService.setTitle('Neuer Beitrag – VLT Admin');
+      this.titleService.setTitle(`${this.words.fresh} – VLT Admin`);
       this.loading.set(false);
       // Ein leerer Textblock, damit man sofort schreiben kann statt erst
-      // einen Baustein suchen zu muessen.
-      this.blocks.set([createBlock('text')]);
+      // einen Baustein suchen zu muessen. Ein Event bekommt die Karte
+      // gleich dazu – ohne sie laesst es sich ohnehin nicht speichern.
+      this.blocks.set(this.isEvent ? [createBlock('text'), createBlock('map')] : [createBlock('text')]);
       return;
     }
 
     this.postId.set(id);
-    this.api.post(id).subscribe({
+    this.api.post(id, this.kind).subscribe({
       next: (post) => {
         this.fill(post);
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(apiErrorText(err, 'Der Beitrag liess sich nicht laden.'));
+        this.error.set(apiErrorText(err, `${this.words.one} liess sich nicht laden.`));
         this.loading.set(false);
       },
     });
@@ -184,6 +274,9 @@ export class BeitragEditor {
     this.readMinutes = post.readMinutes;
     this.categoryId = post.categoryId;
     this.extraCategoryIds = post.categoryIds;
+    this.eventDate = post.eventDate ?? '';
+    this.eventTime = post.eventTime ?? '';
+    this.location = post.location ?? '';
     this.status.set(post.status);
     this.slugPreview.set(post.slug);
 
@@ -251,6 +344,11 @@ export class BeitragEditor {
     return blockType(kind);
   }
 
+  /** Welche Felder ein Baustein zeigt – die Vorlage schaltet danach. */
+  payload(kind: BlockKind): BlockPayload {
+    return blockType(kind).payload;
+  }
+
   summary(block: EditorBlock): string {
     return blockSummary(block);
   }
@@ -259,13 +357,23 @@ export class BeitragEditor {
     return isEmptyBlock(block);
   }
 
-  /** Setzt den Text eines Blocks. Neues Objekt statt Mutation, damit die
-   *  abgeleiteten Anzeigen (leer? Zusammenfassung?) mitbekommen, was los ist. */
-  setText(uid: number, text: string): void {
-    this.blocks.update((list) =>
-      list.map((block) => (block.uid === uid ? { ...block, text } : block)),
-    );
+  /**
+   * Aendert einen Block. Neues Objekt statt Mutation, damit die abgeleiteten
+   * Anzeigen (leer? Zusammenfassung?) mitbekommen, was los ist.
+   */
+  private patch(uid: number, change: (block: EditorBlock) => EditorBlock): void {
+    this.blocks.update((list) => list.map((block) => (block.uid === uid ? change(block) : block)));
     this.touch();
+  }
+
+  /** Setzt den Text eines Blocks. */
+  setText(uid: number, text: string): void {
+    this.patch(uid, (block) => ({ ...block, text }));
+  }
+
+  /** Setzt die Adresse eines Link-Bausteins. */
+  setUrl(uid: number, url: string): void {
+    this.patch(uid, (block) => ({ ...block, url }));
   }
 
   /** Haengt einen Baustein an – der Weg ohne Maus. */
@@ -295,6 +403,193 @@ export class BeitragEditor {
 
   indexOf(uid: number): number {
     return this.blocks().findIndex((block) => block.uid === uid);
+  }
+
+  // ── Tabelle ────────────────────────────────────────────────
+  // Die Umformungen selbst stehen in blocks.ts: sie gehoeren zur Tabelle,
+  // nicht zum Editor, und werden dort auch gebraucht, wenn ein geladener
+  // Beitrag in die Form des Editors kommt.
+
+  columns(block: EditorBlock): number {
+    return tableColumns(block.table);
+  }
+
+  /** Spaltenbreite als Liste, damit die Vorlage die Kopfleiste zeichnen kann. */
+  columnIndexes(block: EditorBlock): number[] {
+    return Array.from({ length: tableColumns(block.table) }, (_, index) => index);
+  }
+
+  setCell(uid: number, row: number, column: number, value: string): void {
+    this.patch(uid, (block) => ({ ...block, table: setTableCell(block.table, row, column, value) }));
+  }
+
+  /** Erste Zeile als Kopfzeile darstellen – oder eben nicht. */
+  toggleTableHead(uid: number, head: boolean): void {
+    this.patch(uid, (block) => ({ ...block, table: { ...block.table, head } }));
+  }
+
+  addRow(uid: number): void {
+    this.patch(uid, (block) => ({ ...block, table: addTableRow(block.table) }));
+  }
+
+  removeRow(uid: number, row: number): void {
+    this.patch(uid, (block) => ({ ...block, table: removeTableRow(block.table, row) }));
+  }
+
+  addColumn(uid: number): void {
+    this.patch(uid, (block) => ({ ...block, table: addTableColumn(block.table) }));
+  }
+
+  removeColumn(uid: number, column: number): void {
+    this.patch(uid, (block) => ({ ...block, table: removeTableColumn(block.table, column) }));
+  }
+
+  canAddRow(block: EditorBlock): boolean {
+    return block.table.rows.length < TABLE_MAX_ROWS;
+  }
+
+  canAddColumn(block: EditorBlock): boolean {
+    return tableColumns(block.table) < TABLE_MAX_COLUMNS;
+  }
+
+  // ── Dokumente ──────────────────────────────────────────────
+
+  canAddDocument(block: EditorBlock): boolean {
+    return block.documents.length < BLOCK_MAX_DOCUMENTS;
+  }
+
+  /** Beschriftung einer Datei – das, was im Beitrag als Linktext steht. */
+  setDocumentLabel(uid: number, documentUid: number, label: string): void {
+    this.patch(uid, (block) => ({
+      ...block,
+      documents: block.documents.map((document) =>
+        document.uid === documentUid ? { ...document, label } : document,
+      ),
+    }));
+  }
+
+  removeDocument(uid: number, documentUid: number): void {
+    this.patch(uid, (block) => ({
+      ...block,
+      documents: block.documents.filter((document) => document.uid !== documentUid),
+    }));
+  }
+
+  /** Verschiebt eine Datei in der Liste; die Reihenfolge steht so im Beitrag. */
+  moveDocument(uid: number, documentUid: number, direction: -1 | 1): void {
+    this.patch(uid, (block) => {
+      const from = block.documents.findIndex((document) => document.uid === documentUid);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= block.documents.length) return block;
+
+      const documents = [...block.documents];
+      [documents[from], documents[to]] = [documents[to], documents[from]];
+      return { ...block, documents };
+    });
+  }
+
+  /** Dateiname ohne Ordner – er steht unter der Beschriftung. */
+  filename(file: AdminMedia): string {
+    return file.path.split('/').pop() ?? file.path;
+  }
+
+  /** Endung als Abzeichen vor der Zeile: "PDF", "DOCX" … */
+  extension(file: AdminMedia): string {
+    const name = this.filename(file);
+    const value = name.split('.').pop() ?? '';
+    return value === name ? 'Datei' : value.toUpperCase();
+  }
+
+  // ── Karte ──────────────────────────────────────────────────
+
+  /**
+   * Sucht die Adresse eines Karten-Bausteins.
+   *
+   * Gesucht wird nach dem, was im Adressfeld des Bausteins steht – und wenn
+   * das leer ist, nach dem Ort aus den Kopfdaten des Events. So genuegt bei
+   * einem Event oft ein Klick, weil der Ort schon eingetragen ist.
+   */
+  searchAddress(block: EditorBlock): void {
+    const query = block.text.trim() || this.location.trim();
+    if (query === '') {
+      this.geo.set({ uid: block.uid, busy: false, results: [], message: 'Geben Sie zuerst eine Adresse ein.' });
+      return;
+    }
+
+    this.geo.set({ uid: block.uid, busy: true, results: [], message: '' });
+    this.geocoder.search(query).subscribe({
+      next: (results) => {
+        // Nur uebernehmen, wenn nicht inzwischen in einem anderen Baustein
+        // gesucht wird – sonst landete die Antwort am falschen Ort.
+        if (this.geo()?.uid !== block.uid) return;
+
+        // Ein einziger Treffer ist eindeutig: gleich setzen statt eine Liste
+        // mit einem Eintrag zum Anklicken zu zeigen.
+        if (results.length === 1) {
+          this.chooseResult(block.uid, results[0]);
+          return;
+        }
+        this.geo.set({
+          uid: block.uid,
+          busy: false,
+          results,
+          message: results.length === 0 ? 'Keine Adresse gefunden. Versuchen Sie es mit Strasse und Ort.' : '',
+        });
+      },
+      error: () => {
+        if (this.geo()?.uid !== block.uid) return;
+        this.geo.set({
+          uid: block.uid,
+          busy: false,
+          results: [],
+          message: 'Die Adresssuche ist gerade nicht erreichbar. Klicken Sie den Ort direkt in der Karte an.',
+        });
+      },
+    });
+  }
+
+  /** Uebernimmt einen Treffer der Suche als Standort. */
+  chooseResult(uid: number, result: GeoResult): void {
+    this.geo.set(null);
+    this.patch(uid, (block) => ({
+      ...block,
+      // Die gefundene Adresse in ihrer Kurzform: "Lüssiweg 24, 6300 Zug"
+      // ist meist genauer als das, was eingetippt wurde ("lüssiweg zug").
+      text: result.short,
+      location: {
+        lat: result.lat,
+        lng: result.lng,
+        zoom: block.location?.zoom ?? MAP_ZOOM_DEFAULT,
+      },
+    }));
+  }
+
+  /** Ein Klick in die Karte versetzt die Markierung. */
+  pickLocation(uid: number, point: LatLng): void {
+    this.patch(uid, (block) => ({
+      ...block,
+      location: { lat: point.lat, lng: point.lng, zoom: block.location?.zoom ?? MAP_ZOOM_DEFAULT },
+    }));
+  }
+
+  zoomMap(uid: number, step: -1 | 1): void {
+    this.patch(uid, (block) => {
+      if (!block.location) return block;
+      const zoom = Math.max(MAP_ZOOM_MIN, Math.min(MAP_ZOOM_MAX, block.location.zoom + step));
+      return { ...block, location: { ...block.location, zoom } };
+    });
+  }
+
+  clearLocation(uid: number): void {
+    this.patch(uid, (block) => ({ ...block, location: null }));
+  }
+
+  /** Enter im Adressfeld einer Karte sucht, statt nichts zu tun. */
+  onTextKey(block: EditorBlock, event: KeyboardEvent): void {
+    if (block.kind === 'map' && event.key === 'Enter') {
+      event.preventDefault();
+      this.searchAddress(block);
+    }
   }
 
   // ── Ziehen und Ablegen ─────────────────────────────────────
@@ -373,38 +668,49 @@ export class BeitragEditor {
     this.handle.set(null);
   }
 
-  // ── Bilder ─────────────────────────────────────────────────
+  // ── Dateien ────────────────────────────────────────────────
 
   openCoverPicker(): void {
     this.picker.set({ kind: 'cover' });
   }
 
   openBlockPicker(uid: number, slot: number): void {
-    this.picker.set({ kind: 'block', uid, slot });
+    this.picker.set({ kind: 'image', uid, slot });
+  }
+
+  openDocumentPicker(uid: number): void {
+    this.picker.set({ kind: 'document', uid });
   }
 
   closePicker(): void {
     this.picker.set(null);
   }
 
-  onImageChosen(image: AdminMedia): void {
+  /** Nimmt die gewaehlte Datei an der Stelle entgegen, von der aus gewaehlt wurde. */
+  onMediaChosen(file: AdminMedia): void {
     const target = this.picker();
     this.picker.set(null);
     if (!target) return;
 
     if (target.kind === 'cover') {
-      this.cover.set(image);
-    } else {
-      this.blocks.update((list) =>
-        list.map((block) => {
-          if (block.uid !== target.uid) return block;
-          const images = [...block.images];
-          images[target.slot] = image;
-          return { ...block, images };
-        }),
-      );
+      this.cover.set(file);
+      this.touch();
+      return;
     }
-    this.touch();
+
+    if (target.kind === 'document') {
+      this.patch(target.uid, (block) => ({
+        ...block,
+        documents: [...block.documents, createDocument(file)],
+      }));
+      return;
+    }
+
+    this.patch(target.uid, (block) => {
+      const images = [...block.images];
+      images[target.slot] = file;
+      return { ...block, images };
+    });
   }
 
   clearCover(): void {
@@ -413,15 +719,11 @@ export class BeitragEditor {
   }
 
   clearBlockImage(uid: number, slot: number): void {
-    this.blocks.update((list) =>
-      list.map((block) => {
-        if (block.uid !== uid) return block;
-        const images = [...block.images];
-        images[slot] = null;
-        return { ...block, images };
-      }),
-    );
-    this.touch();
+    this.patch(uid, (block) => {
+      const images = [...block.images];
+      images[slot] = null;
+      return { ...block, images };
+    });
   }
 
   // ── Speichern ──────────────────────────────────────────────
@@ -437,6 +739,18 @@ export class BeitragEditor {
       this.error.set('Ohne Titel geht es nicht.');
       return;
     }
+    if (this.isEvent && this.eventDate === '') {
+      this.error.set('Ein Event braucht ein Datum.');
+      return;
+    }
+    if (this.isEvent && this.location.trim() === '') {
+      this.error.set('Ein Event braucht einen Ort.');
+      return;
+    }
+    if (!this.hasMap()) {
+      this.error.set('Ein Event braucht einen Karten-Baustein mit dem Standort.');
+      return;
+    }
     if (this.emptyBlocks().length > 0) {
       const stellen = this.emptyBlocks().map((entry) => entry.index + 1).join(', ');
       this.error.set(`Diese Bausteine sind noch leer: ${stellen}. Füllen oder entfernen Sie sie.`);
@@ -449,6 +763,9 @@ export class BeitragEditor {
       // mitzuschicken hiesse, die Regel an zwei Stellen zu pflegen.
       excerpt: this.excerpt.trim(),
       date: this.date,
+      eventDate: this.eventDate,
+      eventTime: this.eventTime.trim(),
+      location: this.location.trim(),
       author: this.author.trim(),
       readMinutes: this.readMinutes,
       status: this.status(),
@@ -462,7 +779,8 @@ export class BeitragEditor {
 
     this.saving.set(true);
     const id = this.postId();
-    const request = id === null ? this.api.create(payload) : this.api.update(id, payload);
+    const request =
+      id === null ? this.api.create(payload, this.kind) : this.api.update(id, payload, this.kind);
 
     request.subscribe({
       next: (result) => {
@@ -479,12 +797,12 @@ export class BeitragEditor {
           this.postId.set(result.id);
           // Adresse nachziehen: ein Neuladen soll jetzt diesen Beitrag
           // oeffnen und nicht wieder ein leeres Formular.
-          this.router.navigate(['/admin/beitraege', result.id], { replaceUrl: true });
+          this.router.navigate([this.words.admin, result.id], { replaceUrl: true });
         }
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(apiErrorText(err, 'Der Beitrag liess sich nicht speichern.'));
+        this.error.set(apiErrorText(err, `${this.words.one} liess sich nicht speichern.`));
       },
     });
   }
@@ -494,14 +812,6 @@ export class BeitragEditor {
     if (this.dirty() && !confirm('Es gibt ungespeicherte Änderungen. Trotzdem zurück?')) {
       return;
     }
-    this.router.navigate(['/admin/beitraege']);
+    this.router.navigate([this.words.admin]);
   }
-}
-
-/** Heutiges Datum als JJJJ-MM-TT – das Format, das die API erwartet. */
-function todayIso(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
 }

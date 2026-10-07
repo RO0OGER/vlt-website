@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { AuthService } from './auth.service';
-import { BlockKind } from './blocks';
+import { BlockKind, MapLocation, PayloadBlock, TableData } from './blocks';
 
 /**
  * Zugriff auf die Schreib-API des CMS unter /api/admin/.
@@ -22,7 +22,28 @@ interface Envelope<T> {
   data: T;
 }
 
-/** Bild aus dem Bestand, wie die Bildauswahl es braucht. */
+/**
+ * Die beiden Bestaende, zwischen denen die Dateiauswahl unterscheidet.
+ *
+ * Dieselbe Tabelle, dieselbe Ablage – getrennt nur in der Ansicht: in einen
+ * Bildbaustein gehoert kein PDF, und in eine Download-Liste kein Foto.
+ */
+export type MediaKind = 'image' | 'document';
+
+/**
+ * Beitrag oder Event. Beide liegen in derselben Tabelle und bestehen aus
+ * denselben Bausteinen; die API trennt sie ueber die Adresse
+ * (/api/admin/posts und /api/admin/events).
+ */
+export type PostType = 'post' | 'event';
+
+/** Adresse der Schreib-API je Typ. */
+const RESOURCE: Record<PostType, string> = {
+  post: `${API}/posts`,
+  event: `${API}/events`,
+};
+
+/** Datei aus dem Bestand, wie die Dateiauswahl sie braucht. */
 export interface AdminMedia {
   id: number;
   src: string;
@@ -36,13 +57,17 @@ export interface AdminMedia {
   bytes: number | null;
 }
 
-/** Ein Beitrag in der Uebersicht. */
+/** Ein Beitrag oder Event in der Uebersicht. */
 export interface AdminPostRow {
   id: number;
   slug: string;
   title: string;
   excerpt: string;
   date: string;
+  /** Nur bei Events gesetzt. */
+  eventDate: string | null;
+  eventTime: string | null;
+  location: string | null;
   status: 'draft' | 'published';
   updatedAt: string;
   categoryId: number | null;
@@ -51,20 +76,43 @@ export interface AdminPostRow {
   cover: { src: string; alt: string; ratio: number | null } | null;
 }
 
-/** Ein Block, wie die API ihn liefert. */
+/** Eine Datei in einem Dokument-Baustein, wie die API sie liefert. */
+export interface AdminBlockDocument {
+  /** Linktext im Beitrag. Gehoert zum Baustein, nicht zur Datei. */
+  label: string;
+  file: AdminMedia;
+}
+
+/**
+ * Ein Block, wie die API ihn liefert.
+ *
+ * `url`, `table`, `documents` und `location` stehen bei jedem Block,
+ * gefuellt sind sie nur bei der Art, zu der sie gehoeren – siehe
+ * BlockPayload in blocks.ts.
+ */
 export interface AdminBlock {
   kind: BlockKind;
   text: string;
   images: AdminMedia[];
+  url: string | null;
+  table: TableData | null;
+  documents: AdminBlockDocument[];
+  location: MapLocation | null;
 }
 
-/** Ein Beitrag mit allem, was der Editor braucht. */
+/** Ein Beitrag oder Event mit allem, was der Editor braucht. */
 export interface AdminPostDetail {
   id: number;
   slug: string;
   title: string;
   excerpt: string;
   date: string;
+  /** Tag des Events; bei Beitraegen null. */
+  eventDate: string | null;
+  /** Zeit als freier Text, z. B. "17.30 – 21.00 Uhr". */
+  eventTime: string | null;
+  /** Ort in einer Zeile; bei Beitraegen null. */
+  location: string | null;
   author: string | null;
   readMinutes: number | null;
   status: 'draft' | 'published';
@@ -89,14 +137,19 @@ export interface AdminPostDetail {
 export interface PostPayload {
   title: string;
   excerpt: string;
+  /** Veroeffentlichungsdatum. Bei Events liest die API es nicht. */
   date: string;
+  /** Nur bei Events: Datum (Pflicht), Zeit, Ort (Pflicht). */
+  eventDate: string;
+  eventTime: string;
+  location: string;
   author: string;
   readMinutes: number | null;
   status: 'draft' | 'published';
   categoryId: number | null;
   categoryIds: number[];
   coverId: number | null;
-  blocks: { kind: BlockKind; text: string; imageIds: number[] }[];
+  blocks: PayloadBlock[];
 }
 
 /** Ein Album in der Uebersicht. */
@@ -192,37 +245,37 @@ export class AdminApi {
     return new HttpHeaders({ 'X-Auth-Token': this.auth.getToken() ?? '' });
   }
 
-  /** Alle Beitraege, Entwuerfe eingeschlossen. */
-  posts(): Observable<AdminPostRow[]> {
-    return this.unwrap<AdminPostRow[]>(this.http.get<Envelope<AdminPostRow[]>>(`${API}/posts`, {
+  /** Alle Beitraege oder Events, Entwuerfe eingeschlossen. */
+  posts(type: PostType = 'post'): Observable<AdminPostRow[]> {
+    return this.unwrap<AdminPostRow[]>(this.http.get<Envelope<AdminPostRow[]>>(RESOURCE[type], {
       headers: this.headers(),
     }));
   }
 
-  post(id: number): Observable<AdminPostDetail> {
+  post(id: number, type: PostType = 'post'): Observable<AdminPostDetail> {
     return this.unwrap<AdminPostDetail>(
-      this.http.get<Envelope<AdminPostDetail>>(`${API}/posts/${id}`, { headers: this.headers() }),
+      this.http.get<Envelope<AdminPostDetail>>(`${RESOURCE[type]}/${id}`, { headers: this.headers() }),
     );
   }
 
-  create(payload: PostPayload): Observable<{ id: number; slug: string }> {
+  create(payload: PostPayload, type: PostType = 'post'): Observable<{ id: number; slug: string }> {
     return this.unwrap(
-      this.http.post<Envelope<{ id: number; slug: string }>>(`${API}/posts`, payload, {
+      this.http.post<Envelope<{ id: number; slug: string }>>(RESOURCE[type], payload, {
         headers: this.headers(),
       }),
     );
   }
 
-  update(id: number, payload: PostPayload): Observable<{ id: number; slug: string }> {
+  update(id: number, payload: PostPayload, type: PostType = 'post'): Observable<{ id: number; slug: string }> {
     return this.unwrap(
-      this.http.put<Envelope<{ id: number; slug: string }>>(`${API}/posts/${id}`, payload, {
+      this.http.put<Envelope<{ id: number; slug: string }>>(`${RESOURCE[type]}/${id}`, payload, {
         headers: this.headers(),
       }),
     );
   }
 
-  remove(id: number): Observable<unknown> {
-    return this.http.delete(`${API}/posts/${id}`, { headers: this.headers() });
+  remove(id: number, type: PostType = 'post'): Observable<unknown> {
+    return this.http.delete(`${RESOURCE[type]}/${id}`, { headers: this.headers() });
   }
 
   categories(): Observable<AdminCategory[]> {
@@ -231,9 +284,9 @@ export class AdminApi {
     );
   }
 
-  /** Der Bildbestand fuer die Bildauswahl, neuste zuerst. */
-  media(limit = 200): Observable<AdminMedia[]> {
-    const params = new HttpParams().set('limit', limit);
+  /** Der Bestand fuer die Dateiauswahl, neuste zuerst. */
+  media(kind: MediaKind = 'image', limit = 200): Observable<AdminMedia[]> {
+    const params = new HttpParams().set('limit', limit).set('kind', kind);
     return this.unwrap<AdminMedia[]>(
       this.http.get<Envelope<AdminMedia[]>>(`${API}/media`, { headers: this.headers(), params }),
     );
@@ -307,9 +360,9 @@ export class AdminApi {
   }
 
   /**
-   * Entfernt ein Bild aus dem Bestand.
+   * Entfernt eine Datei aus dem Bestand.
    *
-   * Die API lehnt mit 409 ab, wenn das Bild noch irgendwo verwendet wird.
+   * Die API lehnt mit 409 ab, wenn die Datei noch irgendwo verwendet wird.
    * Welche Stellen das sind, steht dann in `usedBy` – siehe mediaUsedBy().
    */
   removeMedia(id: number): Observable<unknown> {
@@ -317,14 +370,20 @@ export class AdminApi {
   }
 
   /**
-   * Laedt ein Bild hoch. FormData statt JSON, weil die Datei sonst als
+   * Laedt eine Datei hoch. FormData statt JSON, weil die Datei sonst als
    * Base64 durch die Leitung ginge – ein Drittel mehr Daten und doppelt so
    * viel Arbeit auf beiden Seiten.
+   *
+   * `kind` sagt der API, welche Typen sie annehmen soll. Sie koennte das aus
+   * der Datei schliessen, aber dann waere die Fehlermeldung bei einer
+   * abgewiesenen Datei eine Liste aller denkbaren Typen statt derjenigen,
+   * die an dieser Stelle gemeint sind.
    */
-  upload(file: File, alt: string): Observable<AdminMedia> {
+  upload(file: File, alt: string, kind: MediaKind = 'image'): Observable<AdminMedia> {
     const form = new FormData();
     form.append('file', file);
     form.append('alt', alt);
+    form.append('kind', kind);
     // Der Dateiname liefert den lesbaren Teil des Ablagepfads.
     form.append('name', file.name.replace(/\.[^.]+$/, ''));
 

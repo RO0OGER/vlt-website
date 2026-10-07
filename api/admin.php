@@ -17,27 +17,95 @@
  *
  * Aufbau eines Beitrags: Kopfdaten (Titel, Auszug, Datum …) und darunter
  * eine Folge von Bloecken. Ein Block ist eine Zeile in post_sections mit
- * Art (kind), Text und null bis zwei Bildern.
+ * Art (kind), Text und – je nach Art – null bis zwei Bildern, einer
+ * Adresse, einer Tabelle, einer Liste von Dokumenten oder einem Standort.
+ * Was zu welcher Art gehoert, steht in BLOCK_KINDS gleich hier unten.
+ *
+ * Events sind Beitraege mit type = 'event' (Migration 006). Sie laufen ueber
+ * /api/admin/events durch dieselben Funktionen und haben zusaetzlich Datum,
+ * Zeit und Ort sowie einen Karten-Baustein als Pflicht.
  */
 
 declare(strict_types=1);
 
 // ── Bloecke ─────────────────────────────────────────────────
 
-/** Arten, die der Editor kennt, mit der Zahl der erlaubten Bilder. */
+/**
+ * Arten, die der Editor kennt: wie viele Bilder eine Art traegt und was sie
+ * neben Text und Bildern sonst noch mitbringt.
+ *
+ * Die Beigabe (payload) entscheidet, welche Spalten eines Abschnitts
+ * gefuellt werden:
+ *   'none'      nur Text und Bilder – wie bisher
+ *   'url'       post_sections.url: das Ziel des Link-Bausteins
+ *   'table'     post_sections.data: Zeilen und Spalten als JSON
+ *   'documents' post_section_documents: Dateien zum Herunterladen
+ *   'location'  post_sections.data: Breite, Laenge und Zoom als JSON
+ *
+ * Kommt eine Art dazu, ist hier, in der ENUM-Spalte post_sections.kind
+ * (Migrationen 003, 005 und 006) und in src/app/shared/blocks.ts etwas zu
+ * tun.
+ */
 const BLOCK_KINDS = [
-    'text'    => 0,
-    'heading' => 0,
-    'quote'   => 0,
-    'image'   => 1,
-    'gallery' => 2,
+    'text'     => ['images' => 0, 'payload' => 'none'],
+    'heading'  => ['images' => 0, 'payload' => 'none'],
+    'quote'    => ['images' => 0, 'payload' => 'none'],
+    'image'    => ['images' => 1, 'payload' => 'none'],
+    'gallery'  => ['images' => 2, 'payload' => 'none'],
+    'table'    => ['images' => 0, 'payload' => 'table'],
+    'document' => ['images' => 0, 'payload' => 'documents'],
+    'link'     => ['images' => 0, 'payload' => 'url'],
+    'map'      => ['images' => 0, 'payload' => 'location'],
 ];
+
+/**
+ * Die beiden Arten von Eintraegen in posts und die Adresse, unter der sie
+ * im CMS angesprochen werden. Der Router setzt den Typ aus der Adresse;
+ * aus dem Body wird er nie gelesen – ein Beitrag kann so nicht versehentlich
+ * zum Event werden.
+ */
+const POST_TYPES = [
+    'posts'  => 'post',
+    'events' => 'event',
+];
+
+/** Zoomstufen der Karte: weiter weg zeigt keinen Ort mehr, naeher gibt es nicht. */
+const MAP_ZOOM_MIN = 3;
+const MAP_ZOOM_MAX = 19;
 
 /** Laengste erlaubte Textmenge in einem Block. */
 const BLOCK_TEXT_MAX = 20000;
 
+/** Laengste erlaubte Adresse in einem Link-Baustein; so breit ist die Spalte. */
+const BLOCK_URL_MAX = 500;
+
+/**
+ * Grenzen des Tabellen-Bausteins.
+ *
+ * Nicht zum Schutz der Datenbank – die Spalte traegt viel mehr. Eine
+ * Tabelle, die breiter ist als rund zehn Spalten, ist auf dem Telefon
+ * ohnehin nicht mehr lesbar, und eine mit hundert Zeilen gehoert als Datei
+ * zum Herunterladen in einen Dokument-Baustein.
+ */
+const TABLE_MAX_ROWS = 60;
+const TABLE_MAX_COLUMNS = 10;
+const TABLE_CELL_MAX = 500;
+
+/** Dateien je Dokument-Baustein und Laenge ihrer Beschriftung. */
+const BLOCK_MAX_DOCUMENTS = 20;
+const DOCUMENT_LABEL_MAX = 200;
+
 /** Groesste erlaubte Bilddatei beim Hochladen. */
 const UPLOAD_MAX_BYTES = 8388608;
+
+/**
+ * Groesste erlaubte Dokumentdatei.
+ *
+ * Grosszuegiger als bei Bildern: ein eingescannter Jahresbericht sprengt
+ * acht Megabyte muehelos, und verkleinern laesst sich ein PDF nicht so
+ * nebenbei wie ein Foto.
+ */
+const UPLOAD_DOC_MAX_BYTES = 20971520;
 
 /** Dateiendung je erlaubtem Bildtyp. Was hier fehlt, wird nicht angenommen. */
 const UPLOAD_TYPES = [
@@ -45,6 +113,54 @@ const UPLOAD_TYPES = [
     'image/png'  => 'png',
     'image/webp' => 'webp',
     'image/gif'  => 'gif',
+];
+
+/**
+ * Erlaubte Dokumenttypen, nach Dateiendung.
+ *
+ * Bei Bildern genuegt der aus dem Inhalt bestimmte Typ. Bei Office-Dateien
+ * nicht: die drei neueren Formate (docx, xlsx, pptx) sind ZIP-Archive und
+ * kommen aus finfo je nach Magic-Datenbank als das Format selbst oder nur
+ * als application/zip zurueck; die drei aelteren sind OLE-Container und
+ * melden sich als application/vnd.ms-office oder application/CDFV2. Eine
+ * Pruefung allein auf den erkannten Typ wuerde also gueltige Dateien
+ * abweisen.
+ *
+ * Darum entscheidet die Endung, welcher Typ gespeichert wird ('mime'), und
+ * finfo bestaetigt nur, dass die Datei von dieser Bauart ist ('detected').
+ * Eine in .docx umbenannte .exe faellt damit weiterhin auf. Der Dateiname
+ * auf der Platte wird aus der Endung hier gebaut – eine .php kann so nie
+ * entstehen, auch wenn jemand sie als solche hochzuladen versucht.
+ */
+const UPLOAD_DOC_TYPES = [
+    'pdf'  => [
+        'mime'     => 'application/pdf',
+        'detected' => ['application/pdf'],
+    ],
+    'docx' => [
+        'mime'     => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'detected' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
+    ],
+    'doc'  => [
+        'mime'     => 'application/msword',
+        'detected' => ['application/msword', 'application/vnd.ms-office', 'application/CDFV2', 'application/x-ole-storage'],
+    ],
+    'xlsx' => [
+        'mime'     => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'detected' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip'],
+    ],
+    'xls'  => [
+        'mime'     => 'application/vnd.ms-excel',
+        'detected' => ['application/vnd.ms-excel', 'application/vnd.ms-office', 'application/CDFV2', 'application/x-ole-storage'],
+    ],
+    'pptx' => [
+        'mime'     => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'detected' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
+    ],
+    'ppt'  => [
+        'mime'     => 'application/vnd.ms-powerpoint',
+        'detected' => ['application/vnd.ms-powerpoint', 'application/vnd.ms-office', 'application/CDFV2', 'application/x-ole-storage'],
+    ],
 ];
 
 // ── Hilfen ──────────────────────────────────────────────────
@@ -243,6 +359,196 @@ function requireRow(PDO $db, string $table, ?int $id, string $label): ?int
 }
 
 /**
+ * Prueft die Adresse eines Link-Bausteins.
+ *
+ * Drei Formen sind erlaubt: die eigene Seite ("/beitraege/rueckblick"), eine
+ * fremde Seite ueber http:// oder https://, und mailto:. Alles andere wird
+ * abgewiesen – "javascript:" oder "data:" in einem href fuehrt beim
+ * Anklicken Code aus, und das darf kein Redaktor versehentlich einbauen
+ * koennen.
+ *
+ * Wer bloss "www.verband-ika.ch" tippt, bekommt das https:// ergaenzt. Ohne
+ * das waere die Adresse relativ und zeigte ins Leere – ein Fehler, den man
+ * erst nach dem Veroeffentlichen merkt.
+ */
+function urlField(mixed $raw, int $nr): string
+{
+    // Nicht als string deklariert: bei strict_types wuerde ein mitgeschickter
+    // Wert falschen Typs einen TypeError und damit 500 ergeben. textField
+    // weist ihn mit 422 und einer Meldung ab, so wie jedes andere Feld auch.
+    $url = textField(['url' => $raw], 'url', BLOCK_URL_MAX);
+    if ($url === '') {
+        invalid('Baustein ' . $nr . ' ist ein Link und braucht darum eine Adresse.');
+    }
+
+    // Steht ein Schema da, muss es ein unbedenkliches sein.
+    if (preg_match('#^[a-z][a-z0-9+.\-]*:#i', $url) === 1) {
+        if (preg_match('#^(https?://|mailto:)#i', $url) !== 1) {
+            invalid(
+                'Die Adresse von Baustein ' . $nr . ' ist nicht erlaubt. Verwenden Sie '
+                . 'http://, https://, mailto: oder eine Adresse der eigenen Seite wie "/beitraege".'
+            );
+        }
+        return $url;
+    }
+
+    // Eigene Seite.
+    if (str_starts_with($url, '/')) {
+        return $url;
+    }
+
+    return 'https://' . $url;
+}
+
+/**
+ * Prueft die Tabelle eines Tabellen-Bausteins und bringt sie auf eine
+ * rechteckige Form.
+ *
+ * Rechteckig heisst: alle Zeilen sind so breit wie die breiteste. Der Editor
+ * haelt das schon ein, aber darauf verlassen kann sich die API nicht – und
+ * eine Zeile mit zwei Zellen in einer dreispaltigen Tabelle wuerde die
+ * Darstellung verschieben.
+ *
+ * @return array{head: bool, rows: array<int, array<int, string>>}
+ */
+function tableField(array $entry, int $nr): array
+{
+    $raw = $entry['table'] ?? null;
+    if (!is_array($raw)) {
+        invalid('Baustein ' . $nr . ' ist eine Tabelle, bringt aber keine mit.');
+    }
+
+    $rawRows = $raw['rows'] ?? [];
+    if (!is_array($rawRows) || $rawRows === []) {
+        invalid('Die Tabelle in Baustein ' . $nr . ' hat keine Zeilen.');
+    }
+    if (count($rawRows) > TABLE_MAX_ROWS) {
+        invalid('Die Tabelle in Baustein ' . $nr . ' hat mehr als ' . TABLE_MAX_ROWS . ' Zeilen.');
+    }
+
+    $rows  = [];
+    $width = 0;
+    foreach (array_values($rawRows) as $rawRow) {
+        if (!is_array($rawRow)) {
+            invalid('Die Tabelle in Baustein ' . $nr . ' ist unbrauchbar.');
+        }
+        if (count($rawRow) > TABLE_MAX_COLUMNS) {
+            invalid('Die Tabelle in Baustein ' . $nr . ' hat mehr als ' . TABLE_MAX_COLUMNS . ' Spalten.');
+        }
+
+        $row = [];
+        foreach (array_values($rawRow) as $cell) {
+            $row[] = textField(['c' => $cell], 'c', TABLE_CELL_MAX);
+        }
+        $width = max($width, count($row));
+        $rows[] = $row;
+    }
+
+    if ($width === 0) {
+        invalid('Die Tabelle in Baustein ' . $nr . ' hat keine Spalten.');
+    }
+
+    foreach ($rows as $index => $row) {
+        $rows[$index] = array_pad($row, $width, '');
+    }
+
+    return ['head' => !empty($raw['head']), 'rows' => $rows];
+}
+
+/**
+ * Liest die Dateiliste eines Dokument-Bausteins.
+ *
+ * Jeder Eintrag ist eine Datei aus dem Bestand und die Beschriftung, unter
+ * der sie im Beitrag steht. Fehlt die Beschriftung, tritt der Dateiname an
+ * ihre Stelle: ein Download ohne Linktext waere im Beitrag unsichtbar.
+ *
+ * Anders als bei den Bildern fliegen Dubletten nicht raus –
+ * post_section_documents hat einen eigenen Schluessel, dieselbe Datei darf
+ * also zweimal auftauchen.
+ *
+ * @return array<int, array{mediaId: int, label: string}>
+ */
+function documentsField(PDO $db, array $entry, int $nr): array
+{
+    $raw = $entry['documents'] ?? [];
+    if (!is_array($raw)) {
+        invalid('Die Dokumente von Baustein ' . $nr . ' sind unbrauchbar.');
+    }
+    if (count($raw) > BLOCK_MAX_DOCUMENTS) {
+        invalid('Baustein ' . $nr . ' darf höchstens ' . BLOCK_MAX_DOCUMENTS . ' Dokumente enthalten.');
+    }
+
+    $documents = [];
+    foreach (array_values($raw) as $item) {
+        if (!is_array($item)) {
+            invalid('Die Dokumente von Baustein ' . $nr . ' sind unbrauchbar.');
+        }
+
+        $mediaId = idField($item, 'mediaId');
+        if ($mediaId === null) {
+            invalid('Ein Dokument in Baustein ' . $nr . ' hat keine Datei.');
+        }
+
+        // Nicht nur, ob die Datei existiert, sondern auch ihren Pfad: er
+        // dient als Beschriftung, wenn keine gepflegt ist.
+        $stmt = $db->prepare('SELECT path FROM media WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $mediaId]);
+        $path = $stmt->fetchColumn();
+        if ($path === false) {
+            invalid('Ein gewähltes Dokument gibt es nicht.');
+        }
+
+        $label = textField($item, 'label', DOCUMENT_LABEL_MAX);
+        if ($label === '') {
+            $label = basename((string) $path);
+        }
+
+        $documents[] = ['mediaId' => $mediaId, 'label' => $label];
+    }
+    return $documents;
+}
+
+/**
+ * Liest den Standort eines Karten-Bausteins.
+ *
+ * Breite und Laenge als Zahlen in ihrem Wertebereich, die Zoomstufe als
+ * Ganzzahl. Gerundet auf sechs Stellen – das ist rund ein Dezimeter und
+ * damit genauer, als jemand auf einer Karte zeigen kann.
+ *
+ * Die Breite endet bei ±85 Grad: weiter reicht die Kartenprojektion nicht,
+ * ein Punkt dort liesse sich nicht anzeigen.
+ *
+ * @return array{lat: float, lng: float, zoom: int}
+ */
+function locationField(array $entry, int $nr): array
+{
+    $raw = $entry['location'] ?? null;
+    if (!is_array($raw)) {
+        invalid('Baustein ' . $nr . ' ist eine Karte, hat aber noch keinen Standort.');
+    }
+
+    $lat  = $raw['lat'] ?? null;
+    $lng  = $raw['lng'] ?? null;
+    $zoom = $raw['zoom'] ?? 16;
+
+    if (!(is_int($lat) || is_float($lat)) || !(is_int($lng) || is_float($lng))) {
+        invalid('Der Standort in Baustein ' . $nr . ' ist unbrauchbar.');
+    }
+    if ($lat < -85 || $lat > 85 || $lng < -180 || $lng > 180) {
+        invalid('Der Standort in Baustein ' . $nr . ' liegt ausserhalb der Karte.');
+    }
+    if (!is_int($zoom) || $zoom < MAP_ZOOM_MIN || $zoom > MAP_ZOOM_MAX) {
+        invalid('Die Zoomstufe in Baustein ' . $nr . ' ist unbrauchbar.');
+    }
+
+    return [
+        'lat'  => round((float) $lat, 6),
+        'lng'  => round((float) $lng, 6),
+        'zoom' => $zoom,
+    ];
+}
+
+/**
  * Liest die Blockliste aus dem Body und bringt sie in eine Form, auf die man
  * sich beim Schreiben verlassen kann.
  */
@@ -274,7 +580,7 @@ function blocksField(PDO $db, array $body): array
         // raus, weil post_section_images ein Bild je Abschnitt nur einmal
         // fuehren kann (der Schluessel ist section_id + media_id).
         $imageIds  = [];
-        $maxImages = BLOCK_KINDS[$kind];
+        $maxImages = BLOCK_KINDS[$kind]['images'];
         if ($maxImages > 0) {
             $ids = $entry['imageIds'] ?? [];
             if (!is_array($ids)) {
@@ -288,14 +594,94 @@ function blocksField(PDO $db, array $body): array
             }
         }
 
-        // Ein Block ohne Text und ohne Bild waere im Beitrag eine Luecke.
-        if ($text === '' && $imageIds === []) {
+        /*
+         * Die Beigabe der Art: Adresse, Tabelle oder Dateiliste. Jede Art hat
+         * hoechstens eine, und was nicht zur Art gehoert, wird nicht gelesen –
+         * so kann ein mitgeschicktes Feld nie in einem Baustein landen, der
+         * es nachher nicht anzeigt.
+         */
+        $url       = null;
+        $table     = null;
+        $documents = [];
+        $location  = null;
+
+        switch (BLOCK_KINDS[$kind]['payload']) {
+            case 'url':
+                $url = urlField($entry['url'] ?? '', $nr);
+                break;
+            case 'table':
+                $table = tableField($entry, $nr);
+                break;
+            case 'documents':
+                $documents = documentsField($db, $entry, $nr);
+                if ($documents === []) {
+                    invalid('Baustein ' . $nr . ' ist für Dokumente gedacht, enthält aber keine.');
+                }
+                break;
+            case 'location':
+                $location = locationField($entry, $nr);
+                break;
+        }
+
+        /*
+         * Ein Block ohne jeden Inhalt waere im Beitrag eine Luecke. Was als
+         * Inhalt zaehlt, haengt von der Art ab: beim Link ist es die Adresse
+         * (der Titel darf fehlen, dann steht die Adresse selbst da), bei der
+         * Tabelle eine gefuellte Zelle. Die Dateiliste ist oben schon
+         * geprueft, und bei den uebrigen Arten gilt wie bisher Text oder Bild.
+         */
+        $leer = match (BLOCK_KINDS[$kind]['payload']) {
+            'url'       => false,
+            'table'     => $table !== null && !tableHasContent($table),
+            'documents' => false,
+            'location'  => false,
+            default     => $text === '' && $imageIds === [],
+        };
+        if ($leer) {
             invalid('Baustein ' . $nr . ' ist leer.');
         }
 
-        $blocks[] = ['kind' => $kind, 'text' => $text, 'imageIds' => $imageIds];
+        $blocks[] = [
+            'kind'      => $kind,
+            'text'      => $text,
+            'imageIds'  => $imageIds,
+            'url'       => $url,
+            'table'     => $table,
+            'documents' => $documents,
+            'location'  => $location,
+        ];
     }
     return $blocks;
+}
+
+/**
+ * Ein Event braucht eine Karte mit dem Standort.
+ *
+ * Der Ort steht zwar in den Kopfdaten, aber wer hinfahren will, braucht mehr
+ * als den Namen eines Schulhauses. Die Pruefung steht hier und nicht nur im
+ * Editor: sonst genuegte ein Direktaufruf, um sie zu umgehen.
+ */
+function requireMapBlock(array $blocks): void
+{
+    foreach ($blocks as $block) {
+        if ($block['kind'] === 'map') {
+            return;
+        }
+    }
+    invalid('Ein Event braucht einen Karten-Baustein mit dem Standort.');
+}
+
+/** Steht in irgendeiner Zelle der Tabelle etwas? */
+function tableHasContent(array $table): bool
+{
+    foreach ($table['rows'] as $row) {
+        foreach ($row as $cell) {
+            if ($cell !== '') {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /** Liest die Kategorienummern fuer die Mehrfachzuordnung. */
@@ -315,8 +701,15 @@ function categoryIdsField(PDO $db, array $body): array
     return $ids;
 }
 
-/** Baut die geprueften Kopfdaten eines Beitrags aus dem Body. */
-function postFields(PDO $db, array $body, ?int $postId): array
+/**
+ * Baut die geprueften Kopfdaten eines Beitrags oder Events aus dem Body.
+ *
+ * Bei Events sind Datum und Ort Pflicht. Ein Veroeffentlichungsdatum kommt
+ * dafuer nicht aus dem Formular: es ist der Tag des ersten Speicherns (siehe
+ * adminCreatePost). Ein Event hat genau ein Datum, das zaehlt – zwei
+ * Datumsfelder im Editor fuehrten nur zur Frage, welches gemeint ist.
+ */
+function postFields(PDO $db, array $body, ?int $postId, string $type): array
 {
     $title  = textField($body, 'title', 255, true);
     $status = $body['status'] ?? 'draft';
@@ -347,11 +740,17 @@ function postFields(PDO $db, array $body, ?int $postId): array
 
     $author = textField($body, 'author', 120);
 
+    $isEvent   = $type === 'event';
+    $eventTime = $isEvent ? textField($body, 'eventTime', 60) : '';
+
     return [
         'slug'         => $slug,
         'title'        => $title,
         'excerpt'      => textField($body, 'excerpt', 2000),
-        'published_at' => dateField($body, 'date'),
+        'published_at' => $isEvent ? null : dateField($body, 'date'),
+        'event_date'   => $isEvent ? dateField($body, 'eventDate') : null,
+        'event_time'   => $eventTime === '' ? null : $eventTime,
+        'location'     => $isEvent ? textField($body, 'location', 160, true) : null,
         'author'       => $author === '' ? null : $author,
         'read_minutes' => $readMinutes,
         'cover_id'     => requireRow($db, 'media', idField($body, 'coverId'), 'Das gewählte Titelbild'),
@@ -372,15 +771,20 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
 {
     $stmt = $db->prepare('DELETE FROM post_sections WHERE post_id = :id');
     $stmt->execute([':id' => $postId]);
-    // post_section_images haengt per ON DELETE CASCADE daran und geht mit.
+    // post_section_images und post_section_documents haengen per
+    // ON DELETE CASCADE daran und gehen mit.
 
     $insertSection = $db->prepare(
-        'INSERT INTO post_sections (post_id, position, kind, text)
-         VALUES (:post, :position, :kind, :text)'
+        'INSERT INTO post_sections (post_id, position, kind, text, url, data)
+         VALUES (:post, :position, :kind, :text, :url, :data)'
     );
     $insertImage = $db->prepare(
         'INSERT INTO post_section_images (section_id, media_id, position)
          VALUES (:section, :media, :position)'
+    );
+    $insertDocument = $db->prepare(
+        'INSERT INTO post_section_documents (section_id, media_id, label, position)
+         VALUES (:section, :media, :label, :position)'
     );
 
     foreach ($blocks as $position => $block) {
@@ -389,6 +793,16 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
             ':position' => $position,
             ':kind'     => $block['kind'],
             ':text'     => $block['text'],
+            ':url'      => $block['url'],
+            // JSON_UNESCAPED_UNICODE: sonst stehen Umlaute als ä in der
+            // Spalte – gueltig, aber in phpMyAdmin nicht mehr lesbar.
+            // Tabelle und Standort teilen sich die Spalte; eine Art traegt
+            // hoechstens eines von beiden.
+            ':data'     => match (true) {
+                $block['table'] !== null    => json_encode($block['table'], JSON_UNESCAPED_UNICODE),
+                $block['location'] !== null => json_encode($block['location']),
+                default                     => null,
+            },
         ]);
         $sectionId = (int) $db->lastInsertId();
 
@@ -397,6 +811,15 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
                 ':section'  => $sectionId,
                 ':media'    => $mediaId,
                 ':position' => $imagePosition,
+            ]);
+        }
+
+        foreach ($block['documents'] as $documentPosition => $document) {
+            $insertDocument->execute([
+                ':section'  => $sectionId,
+                ':media'    => $document['mediaId'],
+                ':label'    => $document['label'],
+                ':position' => $documentPosition,
             ]);
         }
     }
@@ -415,23 +838,33 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
 // ── Endpunkte: Beitraege ────────────────────────────────────
 
 /**
- * GET /api/admin/posts – alle Beitraege, auch Entwuerfe.
+ * GET /api/admin/posts und /api/admin/events – alle Eintraege eines Typs,
+ * auch Entwuerfe.
  *
  * Anders als die oeffentliche Liste ohne Blaettern: die Redaktion will die
- * ganze Liste sehen und im Browser suchen und filtern.
+ * ganze Liste sehen und im Browser suchen und filtern. Events stehen nach
+ * ihrem Datum, das spaeteste zuoberst – die kommenden sind die, an denen
+ * gerade gearbeitet wird.
  */
-function adminListPosts(PDO $db, string $base): void
+function adminListPosts(PDO $db, string $base, string $type): void
 {
-    $rows = $db->query(
+    // Die Sortierung kommt aus zwei festen Zeichenketten, nie aus der Anfrage.
+    $order = $type === 'event' ? 'p.event_date DESC, p.id DESC' : 'p.published_at DESC, p.id DESC';
+
+    $stmt = $db->prepare(
         'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.status, p.updated_at,
+                p.event_date, p.event_time, p.location,
                 c.id AS category_id, c.name AS category,
                 m.path, m.alt, m.width, m.height,
                 (SELECT COUNT(*) FROM post_sections s WHERE s.post_id = p.id) AS block_count
            FROM posts p
            LEFT JOIN categories c ON c.id = p.category_id
            LEFT JOIN media m      ON m.id = p.cover_id
-          ORDER BY p.published_at DESC, p.id DESC'
-    )->fetchAll();
+          WHERE p.type = :type
+          ORDER BY ' . $order
+    );
+    $stmt->execute([':type' => $type]);
+    $rows = $stmt->fetchAll();
 
     $data = [];
     foreach ($rows as $row) {
@@ -441,6 +874,9 @@ function adminListPosts(PDO $db, string $base): void
             'title'      => $row['title'],
             'excerpt'    => $row['excerpt'],
             'date'       => $row['published_at'],
+            'eventDate'  => $row['event_date'],
+            'eventTime'  => $row['event_time'],
+            'location'   => $row['location'],
             'status'     => $row['status'],
             'updatedAt'  => $row['updated_at'],
             'categoryId' => $row['category_id'] === null ? null : (int) $row['category_id'],
@@ -452,22 +888,34 @@ function adminListPosts(PDO $db, string $base): void
     send(['data' => $data], 200, 0);
 }
 
-/** GET /api/admin/posts/{id} – ein Beitrag samt Bloecken, auch als Entwurf. */
-function adminShowPost(PDO $db, int $id, string $base): void
+/** Meldung, wenn ein Eintrag fehlt – mit dem Wort, das der Redaktor kennt. */
+function notFoundText(string $type): string
+{
+    return $type === 'event' ? 'Event nicht gefunden.' : 'Beitrag nicht gefunden.';
+}
+
+/**
+ * GET /api/admin/posts/{id} – ein Beitrag samt Bloecken, auch als Entwurf.
+ * GET /api/admin/events/{id} – dasselbe fuer ein Event.
+ *
+ * Der Typ gehoert zur Abfrage: unter /events/12 gibt es keinen Beitrag 12.
+ */
+function adminShowPost(PDO $db, int $id, string $base, string $type): void
 {
     $stmt = $db->prepare(
         'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.author, p.read_minutes,
+                p.event_date, p.event_time, p.location,
                 p.status, p.category_id, p.cover_id, p.updated_at,
                 m.path, m.alt, m.mime, m.width, m.height, m.bytes
            FROM posts p
            LEFT JOIN media m ON m.id = p.cover_id
-          WHERE p.id = :id
+          WHERE p.id = :id AND p.type = :type
           LIMIT 1'
     );
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([':id' => $id, ':type' => $type]);
     $post = $stmt->fetch();
     if ($post === false) {
-        fail(404, 'Beitrag nicht gefunden.');
+        fail(404, notFoundText($type));
     }
 
     $stmt = $db->prepare('SELECT category_id FROM post_categories WHERE post_id = :id');
@@ -475,13 +923,15 @@ function adminShowPost(PDO $db, int $id, string $base): void
     $categoryIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 
     $stmt = $db->prepare(
-        'SELECT id, kind, text FROM post_sections WHERE post_id = :id ORDER BY position, id'
+        'SELECT id, kind, text, url, data FROM post_sections WHERE post_id = :id ORDER BY position, id'
     );
     $stmt->execute([':id' => $id]);
     $sections = $stmt->fetchAll();
 
-    // Die Bilder aller Abschnitte in einer Abfrage statt einer je Abschnitt.
-    $images = [];
+    // Die Bilder und Dokumente aller Abschnitte in je einer Abfrage statt in
+    // zwei je Abschnitt.
+    $images    = [];
+    $documents = [];
     if ($sections !== []) {
         $ids          = array_column($sections, 'id');
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
@@ -496,14 +946,39 @@ function adminShowPost(PDO $db, int $id, string $base): void
         foreach ($stmt->fetchAll() as $row) {
             $images[(int) $row['section_id']][] = mediaEntry($row, $base);
         }
+
+        $stmt = $db->prepare(
+            'SELECT sd.section_id, sd.label, m.id, m.path, m.alt, m.mime, m.width, m.height, m.bytes
+               FROM post_section_documents sd
+               JOIN media m ON m.id = sd.media_id
+              WHERE sd.section_id IN (' . $placeholders . ')
+              ORDER BY sd.position, sd.id'
+        );
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll() as $row) {
+            // Die Beschriftung gehoert zum Baustein, die Datei zum Bestand.
+            // Darum beides getrennt: dieselbe Datei kann in einem anderen
+            // Beitrag unter einer anderen Beschriftung stehen.
+            $documents[(int) $row['section_id']][] = [
+                'label' => (string) $row['label'],
+                'file'  => mediaEntry($row, $base),
+            ];
+        }
     }
 
     $blocks = [];
     foreach ($sections as $section) {
+        $sectionId = (int) $section['id'];
         $blocks[] = [
-            'kind'   => $section['kind'],
-            'text'   => $section['text'],
-            'images' => $images[(int) $section['id']] ?? [],
+            'kind'      => $section['kind'],
+            'text'      => $section['text'],
+            'images'    => $images[$sectionId] ?? [],
+            'url'       => $section['url'],
+            // Tabelle und Standort teilen sich die Spalte data. Welches von
+            // beiden drinsteht, sagt die Art.
+            'table'     => $section['kind'] === 'table' ? tableObject($section['data']) : null,
+            'documents' => $documents[$sectionId] ?? [],
+            'location'  => $section['kind'] === 'map' ? locationObject($section['data']) : null,
         ];
     }
 
@@ -514,6 +989,9 @@ function adminShowPost(PDO $db, int $id, string $base): void
             'title'       => $post['title'],
             'excerpt'     => $post['excerpt'],
             'date'        => $post['published_at'],
+            'eventDate'   => $post['event_date'],
+            'eventTime'   => $post['event_time'],
+            'location'    => $post['location'],
             'author'      => $post['author'],
             'readMinutes' => $post['read_minutes'] === null ? null : (int) $post['read_minutes'],
             'status'      => $post['status'],
@@ -532,28 +1010,39 @@ function adminShowPost(PDO $db, int $id, string $base): void
     ], 200, 0);
 }
 
-/** POST /api/admin/posts – neuer Beitrag. */
-function adminCreatePost(PDO $db): void
+/** POST /api/admin/posts und /api/admin/events – neuer Eintrag. */
+function adminCreatePost(PDO $db, string $type): void
 {
     $body        = jsonBody();
-    $fields      = postFields($db, $body, null);
+    $fields      = postFields($db, $body, null, $type);
     $blocks      = blocksField($db, $body);
     $categoryIds = categoryIdsField($db, $body);
+
+    if ($type === 'event') {
+        requireMapBlock($blocks);
+    }
 
     try {
         $db->beginTransaction();
 
+        // Ein Event bringt kein Veroeffentlichungsdatum mit und bekommt den
+        // Tag des Anlegens – die Spalte darf nie leer sein.
         $stmt = $db->prepare(
-            'INSERT INTO posts (slug, title, excerpt, published_at, author, read_minutes,
-                                cover_id, category_id, status)
-             VALUES (:slug, :title, :excerpt, :published_at, :author, :read_minutes,
+            'INSERT INTO posts (type, slug, title, excerpt, published_at, event_date, event_time,
+                                location, author, read_minutes, cover_id, category_id, status)
+             VALUES (:type, :slug, :title, :excerpt, COALESCE(:published_at, CURDATE()),
+                     :event_date, :event_time, :location, :author, :read_minutes,
                      :cover_id, :category_id, :status)'
         );
         $stmt->execute([
+            ':type'         => $type,
             ':slug'         => $fields['slug'],
             ':title'        => $fields['title'],
             ':excerpt'      => $fields['excerpt'],
             ':published_at' => $fields['published_at'],
+            ':event_date'   => $fields['event_date'],
+            ':event_time'   => $fields['event_time'],
+            ':location'     => $fields['location'],
             ':author'       => $fields['author'],
             ':read_minutes' => $fields['read_minutes'],
             ':cover_id'     => $fields['cover_id'],
@@ -575,27 +1064,34 @@ function adminCreatePost(PDO $db): void
     send(['data' => ['id' => $postId, 'slug' => $fields['slug']]], 201, 0);
 }
 
-/** PUT /api/admin/posts/{id} – bestehenden Beitrag speichern. */
-function adminUpdatePost(PDO $db, int $id): void
+/** PUT /api/admin/posts/{id} und /api/admin/events/{id} – Eintrag speichern. */
+function adminUpdatePost(PDO $db, int $id, string $type): void
 {
-    $stmt = $db->prepare('SELECT id FROM posts WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
+    $stmt = $db->prepare('SELECT id FROM posts WHERE id = :id AND type = :type LIMIT 1');
+    $stmt->execute([':id' => $id, ':type' => $type]);
     if ($stmt->fetchColumn() === false) {
-        fail(404, 'Beitrag nicht gefunden.');
+        fail(404, notFoundText($type));
     }
 
     $body        = jsonBody();
-    $fields      = postFields($db, $body, $id);
+    $fields      = postFields($db, $body, $id, $type);
     $blocks      = blocksField($db, $body);
     $categoryIds = categoryIdsField($db, $body);
+
+    if ($type === 'event') {
+        requireMapBlock($blocks);
+    }
 
     try {
         $db->beginTransaction();
 
+        // Ohne mitgeschicktes Datum (Events) bleibt das bisherige stehen.
         $stmt = $db->prepare(
             'UPDATE posts
                 SET slug = :slug, title = :title, excerpt = :excerpt,
-                    published_at = :published_at, author = :author,
+                    published_at = COALESCE(:published_at, published_at),
+                    event_date = :event_date, event_time = :event_time,
+                    location = :location, author = :author,
                     read_minutes = :read_minutes, cover_id = :cover_id,
                     category_id = :category_id, status = :status
               WHERE id = :id'
@@ -605,6 +1101,9 @@ function adminUpdatePost(PDO $db, int $id): void
             ':title'        => $fields['title'],
             ':excerpt'      => $fields['excerpt'],
             ':published_at' => $fields['published_at'],
+            ':event_date'   => $fields['event_date'],
+            ':event_time'   => $fields['event_time'],
+            ':location'     => $fields['location'],
             ':author'       => $fields['author'],
             ':read_minutes' => $fields['read_minutes'],
             ':cover_id'     => $fields['cover_id'],
@@ -632,13 +1131,13 @@ function adminUpdatePost(PDO $db, int $id): void
  * mit. Die Bilder selbst bleiben in media: sie koennen anderswo verwendet
  * sein, und eine geloeschte Datei bekommt man nicht zurueck.
  */
-function adminDeletePost(PDO $db, int $id): void
+function adminDeletePost(PDO $db, int $id, string $type): void
 {
-    $stmt = $db->prepare('DELETE FROM posts WHERE id = :id');
-    $stmt->execute([':id' => $id]);
+    $stmt = $db->prepare('DELETE FROM posts WHERE id = :id AND type = :type');
+    $stmt->execute([':id' => $id, ':type' => $type]);
 
     if ($stmt->rowCount() === 0) {
-        fail(404, 'Beitrag nicht gefunden.');
+        fail(404, notFoundText($type));
     }
     send(['data' => ['deleted' => true]], 200, 0);
 }
@@ -1122,16 +1621,27 @@ function mediaEntry(array $row, string $base): array
     ];
 }
 
-/** GET /api/admin/media – der Bildbestand fuer die Bildauswahl. */
+/**
+ * GET /api/admin/media – der Bestand fuer die Dateiauswahl.
+ *
+ * ?kind=document liefert die Dokumente, alles andere die Bilder. Getrennt,
+ * weil die Auswahl im Editor getrennt ist: in einen Bildbaustein gehoert
+ * kein PDF, und in eine Download-Liste kein Foto. Wer beides in einem Topf
+ * zeigt, laesst den Redaktor suchen.
+ *
+ * Die Trennung laeuft ueber den Typ und nicht ueber eine Liste erlaubter
+ * Typen: so tauchen auch die PDFs aus der WordPress-Migration auf, deren
+ * Typ damals anders geschrieben wurde.
+ */
 function adminListMedia(PDO $db, string $base): void
 {
-    $limit = intParam('limit', 200, 1, 500);
+    $limit    = intParam('limit', 200, 1, 500);
+    $operator = ($_GET['kind'] ?? '') === 'document' ? 'NOT LIKE' : 'LIKE';
 
-    // Nur Bilder: Dokumente (PDF) gehoeren zu Seiten, nicht in Bildbloecke.
     $stmt = $db->prepare(
         "SELECT id, path, alt, mime, width, height, bytes
            FROM media
-          WHERE mime LIKE 'image/%'
+          WHERE mime " . $operator . " 'image/%'
           ORDER BY created_at DESC, id DESC
           LIMIT :limit"
     );
@@ -1146,30 +1656,41 @@ function adminListMedia(PDO $db, string $base): void
 }
 
 /**
- * Sucht alle Stellen, an denen ein Bild verwendet wird.
+ * Sucht alle Stellen, an denen eine Datei verwendet wird.
  *
  * Das ist keine Bequemlichkeit, sondern die einzige Sicherung, die es gibt:
  * alle Fremdschluessel auf media stehen auf ON DELETE CASCADE oder SET NULL.
- * Ein DELETE auf media wuerde also anstandslos durchgehen und das Bild
+ * Ein DELETE auf media wuerde also anstandslos durchgehen und die Datei
  * unterwegs aus Beitraegen, Alben und Vorstandsfotos entfernen, ohne dass
  * jemand etwas merkt. Die Datenbank haelt hier niemanden auf – diese
  * Funktion muss es tun.
  *
  * Geprueft wird nicht nur auf Beitraege: ein Bild, das am Vorstand oder an
- * einem Album haengt, ist genauso in Gebrauch.
+ * einem Album haengt, ist genauso in Gebrauch – und ein PDF, das als
+ * Download in einem Beitrag oder auf einer Seite steht, ebenfalls.
  *
- * @return string[] Klartext je Fundstelle, leer wenn das Bild frei ist.
+ * @return string[] Klartext je Fundstelle, leer wenn die Datei frei ist.
  */
 function mediaUsage(PDO $db, int $id): array
 {
     // Jede Zeile: Beschreibung => Abfrage, die die betroffenen Namen liefert.
+    // Beitraege und Events liegen beide in posts, der Redaktor sucht sie aber
+    // an verschiedenen Stellen im CMS. Die Abfragen darauf liefern darum
+    // "Typ|Titel", und die Schleife unten setzt den Typ vor die Beschreibung.
+    $postName = 'CONCAT(IF(p.type = "event", "Event", "Beitrag"), "|", p.title)';
+
     $quellen = [
-        'Beitrag (Titelbild)' => 'SELECT title FROM posts WHERE cover_id = :id',
-        'Beitrag (Baustein)'  => 'SELECT DISTINCT p.title
+        '(Titelbild)'         => 'SELECT ' . $postName . ' FROM posts p WHERE p.cover_id = :id',
+        '(Baustein)'          => 'SELECT DISTINCT ' . $postName . '
                                     FROM post_section_images ssi
                                     JOIN post_sections s ON s.id = ssi.section_id
                                     JOIN posts p         ON p.id = s.post_id
                                    WHERE ssi.media_id = :id',
+        '(Dokument)'          => 'SELECT DISTINCT ' . $postName . '
+                                    FROM post_section_documents sd
+                                    JOIN post_sections s ON s.id = sd.section_id
+                                    JOIN posts p         ON p.id = s.post_id
+                                   WHERE sd.media_id = :id',
         'Album (Titelbild)'   => 'SELECT title FROM albums WHERE cover_id = :id',
         'Album (Bild)'        => 'SELECT DISTINCT a.title
                                     FROM album_images ai
@@ -1187,6 +1708,13 @@ function mediaUsage(PDO $db, int $id): array
         $stmt = $db->prepare($sql);
         $stmt->execute([':id' => $id]);
         foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
+            // "Event|Generalversammlung" wird zu
+            // "Event (Titelbild): «Generalversammlung»".
+            if (str_starts_with($label, '(')) {
+                [$typ, $titel] = explode('|', (string) $name, 2) + [1 => ''];
+                $usage[]       = $typ . ' ' . $label . ': «' . $titel . '»';
+                continue;
+            }
             $usage[] = $label . ': «' . $name . '»';
         }
     }
@@ -1194,14 +1722,14 @@ function mediaUsage(PDO $db, int $id): array
 }
 
 /**
- * DELETE /api/admin/media/{id} – ein Bild aus dem Bestand entfernen.
+ * DELETE /api/admin/media/{id} – eine Datei aus dem Bestand entfernen.
  *
- * Nur, wenn es nirgends mehr verwendet wird. Wird es noch gebraucht, kommt
- * 409 zurueck samt Liste der Fundstellen – so muss niemand raten, wo das
- * Bild noch haengt.
+ * Nur, wenn sie nirgends mehr verwendet wird. Wird sie noch gebraucht, kommt
+ * 409 zurueck samt Liste der Fundstellen – so muss niemand raten, wo die
+ * Datei noch haengt.
  *
  * Pruefung und Loeschung laufen in einer Transaktion. Sonst koennte jemand
- * das Bild genau zwischen beiden Schritten in einen Beitrag setzen, und es
+ * die Datei genau zwischen beiden Schritten in einen Beitrag setzen, und sie
  * verschwaende ihm gleich wieder unter den Haenden.
  */
 function adminDeleteMedia(PDO $db, array $config, int $id): void
@@ -1215,14 +1743,14 @@ function adminDeleteMedia(PDO $db, array $config, int $id): void
 
         if ($path === false) {
             $db->rollBack();
-            fail(404, 'Bild nicht gefunden.');
+            fail(404, 'Datei nicht gefunden.');
         }
 
         $usage = mediaUsage($db, $id);
         if ($usage !== []) {
             $db->rollBack();
             send([
-                'error'  => 'Dieses Bild wird noch verwendet und kann darum nicht gelöscht werden.',
+                'error'  => 'Diese Datei wird noch verwendet und kann darum nicht gelöscht werden.',
                 'usedBy' => $usage,
             ], 409, 0);
         }
@@ -1258,7 +1786,7 @@ function adminDeleteMedia(PDO $db, array $config, int $id): void
         && str_starts_with($realFile, $realRoot . DIRECTORY_SEPARATOR)
     ) {
         if (!@unlink($realFile)) {
-            error_log('[api] Bilddatei nicht löschbar: ' . $realFile);
+            error_log('[api] Datei nicht löschbar: ' . $realFile);
         }
     }
 
@@ -1266,40 +1794,12 @@ function adminDeleteMedia(PDO $db, array $config, int $id): void
 }
 
 /**
- * POST /api/admin/media – ein Bild hochladen.
+ * Prueft eine hochgeladene Bilddatei und meldet Typ, Endung und Masse.
  *
- * Die Datei landet unter medien/uploads/<Jahr>/ und bekommt einen Namen aus
- * Titel und Zufall. Der Zufallsteil ist kein Schmuck: ohne ihn wuerden zwei
- * Bilder gleichen Namens einander ueberschreiben, und man koennte durch
- * Raten pruefen, welche Dateien es gibt.
+ * @return array{mime: string, ext: string, width: int|null, height: int|null}
  */
-function adminUploadMedia(PDO $db, array $config, string $base): void
+function checkUploadedImage(array $file): array
 {
-    $file = $_FILES['file'] ?? null;
-    if (!is_array($file)) {
-        /*
-         * Ganz leeres $_FILES heisst meist: die Anfrage war groesser als
-         * post_max_size. PHP verwirft sie dann vollstaendig, noch bevor
-         * dieses Skript laeuft – es gibt keinen Fehlercode, den man lesen
-         * koennte. Darum hier die Vermutung als Hinweis.
-         */
-        invalid('Es kam keine Datei an. Vermutlich war sie grösser, als der Server annimmt.');
-    }
-
-    $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        // Die Groessenfehler bekommen eine eigene Meldung: "ungültige Datei"
-        // waere dort schlicht falsch und schickt den Redaktor auf die
-        // Suche nach einem Fehler, den das Bild gar nicht hat.
-        invalid(
-            in_array($uploadError, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
-                ? 'Das Bild ist grösser, als der Server annimmt. Bitte verkleinern Sie es.'
-                : 'Es kam keine gültige Datei an.'
-        );
-    }
-    if (!is_uploaded_file((string) $file['tmp_name'])) {
-        invalid('Es kam keine gültige Datei an.');
-    }
     if ((int) $file['size'] > UPLOAD_MAX_BYTES) {
         invalid('Das Bild ist zu gross (höchstens 8 MB).');
     }
@@ -1320,6 +1820,92 @@ function adminUploadMedia(PDO $db, array $config, string $base): void
     }
     [$width, $height] = $size;
 
+    return ['mime' => $mime, 'ext' => UPLOAD_TYPES[$mime], 'width' => $width, 'height' => $height];
+}
+
+/**
+ * Prueft eine hochgeladene Dokumentdatei und meldet Typ und Endung.
+ *
+ * Die Endung entscheidet, welcher Typ gespeichert wird; der erkannte Typ
+ * bestaetigt nur die Bauart. Warum nicht umgekehrt wie bei Bildern, steht
+ * bei UPLOAD_DOC_TYPES.
+ *
+ * @return array{mime: string, ext: string, width: null, height: null}
+ */
+function checkUploadedDocument(array $file): array
+{
+    if ((int) $file['size'] > UPLOAD_DOC_MAX_BYTES) {
+        invalid('Das Dokument ist zu gross (höchstens 20 MB).');
+    }
+
+    $ext = strtolower((string) pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+    if (!isset(UPLOAD_DOC_TYPES[$ext])) {
+        invalid('Nur PDF, Word, Excel und PowerPoint werden angenommen.');
+    }
+
+    $info     = new finfo(FILEINFO_MIME_TYPE);
+    $detected = (string) $info->file((string) $file['tmp_name']);
+    if (!in_array($detected, UPLOAD_DOC_TYPES[$ext]['detected'], true)) {
+        // Endung und Inhalt passen nicht zusammen. Meist ist das eine falsch
+        // benannte Datei, und genau das soll die Meldung sagen – nicht, dass
+        // der Typ nicht erlaubt waere.
+        invalid('Der Inhalt dieser Datei passt nicht zur Endung ".' . $ext . '".');
+    }
+
+    return ['mime' => UPLOAD_DOC_TYPES[$ext]['mime'], 'ext' => $ext, 'width' => null, 'height' => null];
+}
+
+/**
+ * POST /api/admin/media – ein Bild oder ein Dokument hochladen.
+ *
+ * Welches von beiden, sagt das Feld `kind` ("image" oder "document"). Die
+ * Auswahl im Editor weiss es, denn sie ist fuer das eine oder das andere
+ * offen – und so bekommt der Redaktor eine Fehlermeldung, die zu dem passt,
+ * was er tun wollte, statt einer Liste aller denkbaren Typen.
+ *
+ * Die Datei landet unter medien/uploads/<Jahr>/ und bekommt einen Namen aus
+ * Titel und Zufall. Der Zufallsteil ist kein Schmuck: ohne ihn wuerden zwei
+ * Dateien gleichen Namens einander ueberschreiben, und man koennte durch
+ * Raten pruefen, welche Dateien es gibt.
+ */
+function adminUploadMedia(PDO $db, array $config, string $base): void
+{
+    $isDocument = ($_POST['kind'] ?? 'image') === 'document';
+
+    $file = $_FILES['file'] ?? null;
+    if (!is_array($file)) {
+        /*
+         * Ganz leeres $_FILES heisst meist: die Anfrage war groesser als
+         * post_max_size. PHP verwirft sie dann vollstaendig, noch bevor
+         * dieses Skript laeuft – es gibt keinen Fehlercode, den man lesen
+         * koennte. Darum hier die Vermutung als Hinweis.
+         */
+        invalid('Es kam keine Datei an. Vermutlich war sie grösser, als der Server annimmt.');
+    }
+
+    $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        // Die Groessenfehler bekommen eine eigene Meldung: "ungültige Datei"
+        // waere dort schlicht falsch und schickt den Redaktor auf die
+        // Suche nach einem Fehler, den die Datei gar nicht hat.
+        invalid(
+            in_array($uploadError, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+                ? 'Die Datei ist grösser, als der Server annimmt.'
+                : 'Es kam keine gültige Datei an.'
+        );
+    }
+    if (!is_uploaded_file((string) $file['tmp_name'])) {
+        invalid('Es kam keine gültige Datei an.');
+    }
+
+    $checked = $isDocument ? checkUploadedDocument($file) : checkUploadedImage($file);
+    $mime    = $checked['mime'];
+    $width   = $checked['width'];
+    $height  = $checked['height'];
+
+    // Bei Bildern der Bildtext fuer Screenreader, bei Dokumenten die
+    // Bezeichnung, die in der Auswahl steht und als Linktext vorgeschlagen
+    // wird. Dieselbe Spalte: beides beschreibt die Datei in einem Satz.
     $alt  = textField($_POST, 'alt', 255);
     $stem = slugify((string) ($_POST['name'] ?? ''));
     if ($stem === '') {
@@ -1327,11 +1913,17 @@ function adminUploadMedia(PDO $db, array $config, string $base): void
     }
     $stem = substr($stem, 0, 60);
     if ($stem === '') {
-        $stem = 'bild';
+        $stem = $isDocument ? 'dokument' : 'bild';
     }
 
+    /*
+     * Die Endung kommt aus der Liste der erlaubten Typen, nie aus dem
+     * Dateinamen. Eine hochgeladene "rechnung.php" kann so nie als .php auf
+     * der Platte landen – und der Medienordner wird von Apache ausgeliefert,
+     * dort wuerde sie ausgefuehrt.
+     */
     $year     = date('Y');
-    $relative = 'uploads/' . $year . '/' . $stem . '-' . bin2hex(random_bytes(4)) . '.' . UPLOAD_TYPES[$mime];
+    $relative = 'uploads/' . $year . '/' . $stem . '-' . bin2hex(random_bytes(4)) . '.' . $checked['ext'];
 
     // Zielordner: aus der Konfiguration, sonst neben der API. media_base ist
     // die Web-Adresse, media_dir der Ort auf der Platte – beide muessen auf
@@ -1340,13 +1932,13 @@ function adminUploadMedia(PDO $db, array $config, string $base): void
     $directory = $root . '/uploads/' . $year;
     if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
         error_log('[api] Medienordner nicht anlegbar: ' . $directory);
-        fail(500, 'Der Ablageort für Bilder steht nicht bereit.');
+        fail(500, 'Der Ablageort für Dateien steht nicht bereit.');
     }
 
     $target = $root . '/' . $relative;
     if (!move_uploaded_file((string) $file['tmp_name'], $target)) {
         error_log('[api] Upload nicht speicherbar: ' . $target);
-        fail(500, 'Das Bild konnte nicht gespeichert werden.');
+        fail(500, 'Die Datei konnte nicht gespeichert werden.');
     }
     // Ausfuehrbar muss eine hochgeladene Datei nie sein.
     @chmod($target, 0644);
@@ -1504,17 +2096,21 @@ function handleAdmin(PDO $db, array $config, string $method, string $resource, ?
 
     switch ($resource) {
         case 'posts':
+        case 'events':
+            // Beitraege und Events teilen Tabelle und Funktionen; der Typ
+            // kommt allein aus der Adresse.
+            $type = POST_TYPES[$resource];
             if ($id === null) {
                 match ($method) {
-                    'GET'   => adminListPosts($db, $base),
-                    'POST'  => adminCreatePost($db),
+                    'GET'   => adminListPosts($db, $base, $type),
+                    'POST'  => adminCreatePost($db, $type),
                     default => methodNotAllowed('GET, POST'),
                 };
             } else {
                 match ($method) {
-                    'GET'    => adminShowPost($db, $id, $base),
-                    'PUT'    => adminUpdatePost($db, $id),
-                    'DELETE' => adminDeletePost($db, $id),
+                    'GET'    => adminShowPost($db, $id, $base, $type),
+                    'PUT'    => adminUpdatePost($db, $id, $type),
+                    'DELETE' => adminDeletePost($db, $id, $type),
                     default  => methodNotAllowed('GET, PUT, DELETE'),
                 };
             }

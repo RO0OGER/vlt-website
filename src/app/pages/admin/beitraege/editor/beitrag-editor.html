@@ -6,7 +6,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="15 18 9 12 15 6" />
       </svg>
-      Beiträge
+      {{ words.list }}
     </button>
 
     <div class="bar-state">
@@ -22,7 +22,7 @@
 
     <div class="bar-actions">
       @if (!isNew() && status() === 'published') {
-        <a [href]="'/beitraege/' + slug()" target="_blank" rel="noopener" class="btn-plain">Ansehen</a>
+        <a [href]="words.site + '/' + slug()" target="_blank" rel="noopener" class="btn-plain">Ansehen</a>
       }
       <button type="button" class="btn-plain" (click)="save('draft')" [disabled]="saving() || loading()">
         Als Entwurf speichern
@@ -38,7 +38,7 @@
   }
 
   @if (loading()) {
-    <p class="note" aria-live="polite">Beitrag wird geladen …</p>
+    <p class="note" aria-live="polite">{{ words.one }} wird geladen …</p>
   } @else {
 
     <div class="columns">
@@ -46,7 +46,7 @@
       <!-- ── Bausteinleiste ────────────────────────────────── -->
       <aside class="palette" aria-labelledby="palette-title">
         <p class="col-title" id="palette-title">Bausteine</p>
-        <p class="col-hint">In den Beitrag ziehen oder anklicken zum Anhängen.</p>
+        <p class="col-hint">Hineinziehen oder anklicken zum Anhängen.</p>
 
         <ul class="palette-list">
           @for (type of types; track type.kind) {
@@ -87,7 +87,7 @@
             type="text"
             [(ngModel)]="title"
             (ngModelChange)="onTitleChange($event)"
-            placeholder="Titel des Beitrags"
+            [placeholder]="isEvent ? 'Name des Events' : 'Titel des Beitrags'"
             maxlength="255"
           />
         </div>
@@ -105,6 +105,15 @@
         </div>
 
         <p class="blocks-label">Inhalt</p>
+
+        @if (!hasMap()) {
+          <!-- Pflicht bei Events. Ohne den Hinweis stünde erst beim
+               Speichern da, was fehlt. -->
+          <p class="map-missing" role="status">
+            Ein Event braucht einen Karten-Baustein mit dem Standort.
+            <button type="button" class="btn-small" (click)="addBlock('map')">+ Karte anhängen</button>
+          </p>
+        }
 
         <!-- Ablegestelle ganz oben. Die Stellen sind im Ruhezustand schmal
              und wachsen, sobald etwas gezogen wird – so sind sie leicht zu
@@ -212,6 +221,9 @@
                 </div>
               }
 
+              <!-- Das Textfeld hat jede Art: Fliesstext, Zwischentitel,
+                   Bildlegende, Tabellenbeschriftung, Überschrift einer
+                   Download-Liste oder Titel eines Links. -->
               @if (type(block.kind).multiline) {
                 <textarea
                   class="block-text"
@@ -229,9 +241,280 @@
                   [class.is-heading]="block.kind === 'heading'"
                   [ngModel]="block.text"
                   (ngModelChange)="setText(block.uid, $event)"
+                  (keydown)="onTextKey(block, $event)"
                   [attr.placeholder]="type(block.kind).placeholder"
                   [attr.aria-label]="type(block.kind).label"
                 />
+              }
+
+              <!-- Und darunter, was die Art zusätzlich trägt. -->
+              @switch (payload(block.kind)) {
+
+                <!-- ── Link ───────────────────────────────────── -->
+                @case ('url') {
+                  <input
+                    type="text"
+                    class="block-url"
+                    [ngModel]="block.url"
+                    (ngModelChange)="setUrl(block.uid, $event)"
+                    placeholder="https://… oder /beitraege"
+                    aria-label="Adresse des Links"
+                    maxlength="500"
+                  />
+                  <p class="block-hint">
+                    Im Beitrag steht nur der Titel. Eine Seite dieses Auftritts beginnt mit
+                    einem Schrägstrich, etwa <code>/vorstand</code>; alles andere öffnet
+                    sich in einem neuen Fenster.
+                  </p>
+                }
+
+                <!-- ── Tabelle ────────────────────────────────── -->
+                @case ('table') {
+                  <label class="block-check">
+                    <input
+                      type="checkbox"
+                      [checked]="block.table.head"
+                      (change)="toggleTableHead(block.uid, $any($event.target).checked)"
+                    />
+                    Erste Zeile ist die Kopfzeile
+                  </label>
+
+                  <div class="grid-wrap">
+                    <table class="grid-table">
+                      <!-- Kopfleiste nur zum Entfernen von Spalten: die
+                           Tabelle im Editor ist ein Raster, ihre eigene
+                           Kopfzeile ist die erste Datenzeile. -->
+                      <thead>
+                        <tr>
+                          <th class="grid-corner" aria-hidden="true"></th>
+                          @for (column of columnIndexes(block); track column) {
+                            <th class="grid-colhead">
+                              <button
+                                type="button"
+                                class="grid-del"
+                                (click)="removeColumn(block.uid, column)"
+                                [disabled]="columns(block) <= 1"
+                                [attr.aria-label]="'Spalte ' + (column + 1) + ' entfernen'"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            </th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of block.table.rows; track $index; let r = $index) {
+                          <tr [class.is-head]="block.table.head && r === 0">
+                            <th class="grid-rowhead">
+                              <button
+                                type="button"
+                                class="grid-del"
+                                (click)="removeRow(block.uid, r)"
+                                [disabled]="block.table.rows.length <= 1"
+                                [attr.aria-label]="'Zeile ' + (r + 1) + ' entfernen'"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            </th>
+                            @for (cell of row; track $index; let c = $index) {
+                              <td>
+                                <input
+                                  type="text"
+                                  class="grid-cell"
+                                  [ngModel]="cell"
+                                  (ngModelChange)="setCell(block.uid, r, c, $event)"
+                                  [attr.aria-label]="'Zeile ' + (r + 1) + ', Spalte ' + (c + 1)"
+                                  maxlength="500"
+                                />
+                              </td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="block-actions">
+                    <button
+                      type="button"
+                      class="btn-small"
+                      (click)="addRow(block.uid)"
+                      [disabled]="!canAddRow(block)"
+                    >
+                      + Zeile
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-small"
+                      (click)="addColumn(block.uid)"
+                      [disabled]="!canAddColumn(block)"
+                    >
+                      + Spalte
+                    </button>
+                  </div>
+                }
+
+                <!-- ── Dokumente ──────────────────────────────── -->
+                @case ('documents') {
+                  @if (block.documents.length) {
+                    <ul class="docs">
+                      @for (doc of block.documents; track doc.uid; let d = $index, lastDoc = $last) {
+                        <li class="doc">
+                          <span class="doc-badge" aria-hidden="true">{{ extension(doc.file) }}</span>
+                          <span class="doc-fields">
+                            <input
+                              type="text"
+                              class="doc-label"
+                              [ngModel]="doc.label"
+                              (ngModelChange)="setDocumentLabel(block.uid, doc.uid, $event)"
+                              placeholder="Linktext, z. B. «Jahresbericht 2025»"
+                              [attr.aria-label]="'Linktext für ' + filename(doc.file)"
+                              maxlength="200"
+                            />
+                            <span class="doc-file">{{ filename(doc.file) }}</span>
+                          </span>
+                          <span class="doc-tools">
+                            <button
+                              type="button"
+                              class="tool"
+                              (click)="moveDocument(block.uid, doc.uid, -1)"
+                              [disabled]="d === 0"
+                              aria-label="Dokument nach oben"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="18 15 12 9 6 15" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              class="tool"
+                              (click)="moveDocument(block.uid, doc.uid, 1)"
+                              [disabled]="lastDoc"
+                              aria-label="Dokument nach unten"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              class="tool tool-danger"
+                              (click)="removeDocument(block.uid, doc.uid)"
+                              aria-label="Dokument entfernen"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </span>
+                        </li>
+                      }
+                    </ul>
+                  }
+
+                  <div class="block-actions">
+                    <button
+                      type="button"
+                      class="btn-small"
+                      (click)="openDocumentPicker(block.uid)"
+                      [disabled]="!canAddDocument(block)"
+                    >
+                      + Dokument
+                    </button>
+                  </div>
+
+                  @if (block.documents.length === 0) {
+                    <p class="block-hint">
+                      PDF, Word, Excel oder PowerPoint. Im Beitrag steht je Datei eine Zeile
+                      zum Herunterladen.
+                    </p>
+                  }
+                }
+
+                <!-- ── Karte ──────────────────────────────────── -->
+                @case ('location') {
+                  <div class="block-actions">
+                    <button
+                      type="button"
+                      class="btn-small"
+                      (click)="searchAddress(block)"
+                      [disabled]="geo()?.uid === block.uid && geo()?.busy"
+                    >
+                      {{ geo()?.uid === block.uid && geo()?.busy ? 'Sucht …' : 'Adresse suchen' }}
+                    </button>
+                    @if (block.location) {
+                      <button type="button" class="btn-small" (click)="clearLocation(block.uid)">
+                        Standort entfernen
+                      </button>
+                    }
+                  </div>
+
+                  @if (geo(); as search) {
+                    @if (search.uid === block.uid) {
+                      @if (search.results.length) {
+                        <ul class="geo-results" aria-label="Gefundene Adressen">
+                          @for (result of search.results; track $index) {
+                            <li>
+                              <button type="button" class="geo-result" (click)="chooseResult(block.uid, result)">
+                                <strong>{{ result.short }}</strong>
+                                <span>{{ result.label }}</span>
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      }
+                      @if (search.message) {
+                        <p class="block-hint" role="status">{{ search.message }}</p>
+                      }
+                    }
+                  }
+
+                  @if (block.location; as spot) {
+                    <div class="map-edit">
+                      <app-map-view
+                        [lat]="spot.lat"
+                        [lng]="spot.lng"
+                        [zoom]="spot.zoom"
+                        [pickable]="true"
+                        [label]="block.text || 'Standort'"
+                        (picked)="pickLocation(block.uid, $event)"
+                      />
+                      <div class="map-zoom" role="group" aria-label="Zoom">
+                        <button
+                          type="button"
+                          class="tool"
+                          (click)="zoomMap(block.uid, 1)"
+                          [disabled]="spot.zoom >= zoomMax"
+                          aria-label="Näher heran"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          class="tool"
+                          (click)="zoomMap(block.uid, -1)"
+                          [disabled]="spot.zoom <= zoomMin"
+                          aria-label="Weiter weg"
+                        >
+                          −
+                        </button>
+                      </div>
+                    </div>
+                    <p class="block-hint">
+                      Stimmt die Markierung nicht ganz, klicken Sie in der Karte auf die richtige
+                      Stelle. Mit + und − wählen Sie den Ausschnitt, den die Besucher sehen.
+                    </p>
+                  } @else {
+                    <p class="block-hint">
+                      Adresse eingeben und suchen{{ isEvent && location ? ' – ohne Eingabe wird nach dem Ort des Events gesucht' : '' }}.
+                      Die Karte erscheint, sobald ein Standort gesetzt ist.
+                    </p>
+                  }
+                }
               }
             </div>
           </article>
@@ -263,6 +546,47 @@
       <aside class="meta" aria-labelledby="meta-title">
         <p class="col-title" id="meta-title">Einstellungen</p>
 
+        @if (isEvent) {
+          <div class="field">
+            <label for="event-date">Datum <span class="required" aria-hidden="true">*</span></label>
+            <input
+              id="event-date"
+              type="date"
+              [(ngModel)]="eventDate"
+              (ngModelChange)="touch()"
+              required
+              aria-required="true"
+            />
+          </div>
+
+          <div class="field">
+            <label for="event-time">Zeit</label>
+            <input
+              id="event-time"
+              type="text"
+              [(ngModel)]="eventTime"
+              (ngModelChange)="touch()"
+              placeholder="z. B. 17.30 – 21.00 Uhr"
+              maxlength="60"
+            />
+          </div>
+
+          <div class="field">
+            <label for="event-location">Ort <span class="required" aria-hidden="true">*</span></label>
+            <input
+              id="event-location"
+              type="text"
+              [(ngModel)]="location"
+              (ngModelChange)="touch()"
+              placeholder="z. B. Kantonsschule Zug"
+              maxlength="160"
+              required
+              aria-required="true"
+            />
+            <p class="field-hint">Steht auf der Karte in der Übersicht. Den genauen Standort zeigt der Karten-Baustein.</p>
+          </div>
+        }
+
         <div class="field">
           <span class="field-label" id="cover-label">Titelbild</span>
           <div class="cover" role="group" aria-labelledby="cover-label">
@@ -280,10 +604,12 @@
           </div>
         </div>
 
-        <div class="field">
-          <label for="post-date">Datum</label>
-          <input id="post-date" type="date" [(ngModel)]="date" (ngModelChange)="touch()" />
-        </div>
+        @if (!isEvent) {
+          <div class="field">
+            <label for="post-date">Datum</label>
+            <input id="post-date" type="date" [(ngModel)]="date" (ngModelChange)="touch()" />
+          </div>
+        }
 
         <div class="field">
           <label for="post-category">Hauptkategorie</label>
@@ -299,7 +625,7 @@
         @if (categories().length > 0) {
           <fieldset class="field checks">
             <legend>Weitere Kategorien</legend>
-            <p class="field-hint">Der Beitrag ist auch unter diesen zu finden.</p>
+            <p class="field-hint">Auch unter diesen zu finden.</p>
             @for (category of categories(); track category.id) {
               @if (category.id !== categoryId) {
                 <label class="check">
@@ -315,22 +641,24 @@
           </fieldset>
         }
 
-        <div class="field">
-          <label for="post-author">Autor</label>
-          <input
-            id="post-author"
-            type="text"
-            [(ngModel)]="author"
-            (ngModelChange)="touch()"
-            placeholder="Optional"
-            maxlength="120"
-          />
-        </div>
+        @if (!isEvent) {
+          <div class="field">
+            <label for="post-author">Autor</label>
+            <input
+              id="post-author"
+              type="text"
+              [(ngModel)]="author"
+              (ngModelChange)="touch()"
+              placeholder="Optional"
+              maxlength="120"
+            />
+          </div>
+        }
 
         <div class="field">
           <span class="field-label" id="address-label">Adresse</span>
           <p class="address" aria-labelledby="address-label">
-            /beitraege/{{ slugPreview() || '…' }}
+            {{ words.site }}/{{ slugPreview() || '…' }}
           </p>
           <p class="field-hint">
             Entsteht aus dem Titel. Die endgültige Adresse vergibt der Server beim Speichern.
@@ -356,8 +684,9 @@
 
 @if (picker()) {
   <app-media-picker
-    [usedIds]="usedImageIds()"
-    (chosen)="onImageChosen($event)"
+    [kind]="pickerKind()"
+    [usedIds]="usedMediaIds()"
+    (chosen)="onMediaChosen($event)"
     (closed)="closePicker()"
   />
 }

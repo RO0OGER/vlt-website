@@ -1,0 +1,49 @@
+<div class="map" [class.is-pickable]="pickable()">
+  <!-- Auf der Seite ist die Karte ein Bild aus Kacheln, keine Bedienfläche;
+       die Links unter der Karte führen zur bedienbaren Fassung. Im CMS
+       setzt ein Klick den Punkt, und mit den Pfeiltasten lässt er sich
+       ebenso verschieben. -->
+  <div
+    class="map-canvas"
+    [attr.role]="pickable() ? 'application' : 'img'"
+    [attr.aria-label]="pickable() ? label() + ' – Pfeiltasten verschieben die Markierung' : label()"
+    [attr.tabindex]="pickable() ? 0 : null"
+    (click)="onClick($event)"
+    (keydown)="onKey($event)"
+  >
+    <div
+      class="map-tiles"
+      [style.left]="'calc(50% - ' + offset().x + 'px)'"
+      [style.top]="'calc(50% - ' + offset().y + 'px)'"
+    >
+      @for (tile of tiles(); track tile.key) {
+        <img
+          class="map-tile"
+          [src]="tile.src"
+          alt=""
+          [style.left.px]="tile.left"
+          [style.top.px]="tile.top"
+          width="256"
+          height="256"
+          loading="lazy"
+          draggable="false"
+        />
+      }
+    </div>
+
+    <!-- Die Spitze der Markierung zeigt auf den Punkt, darum sitzt das
+         Symbol über der Mitte und nicht auf ihr. -->
+    <svg class="map-pin" width="36" height="46" viewBox="0 0 36 46" aria-hidden="true">
+      <path
+        d="M18 1C8.6 1 1 8.4 1 17.6 1 30 18 45 18 45s17-15 17-27.4C35 8.4 27.4 1 18 1z"
+        class="map-pin-body"
+      />
+      <circle cx="18" cy="17.5" r="6.5" class="map-pin-dot" />
+    </svg>
+  </div>
+
+  <!-- Pflicht nach den Nutzungsregeln von OpenStreetMap. -->
+  <a class="map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">
+    © OpenStreetMap
+  </a>
+</div>

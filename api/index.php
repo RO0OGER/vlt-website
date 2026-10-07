@@ -117,6 +117,88 @@ function mediaObject(?array $row, string $base): ?array
     ];
 }
 
+/**
+ * Baut aus einer Zeile mit Dateiangaben den Dokumenteintrag fuer das
+ * Frontend: Beschriftung, Adresse zum Herunterladen, Typ und Groesse.
+ *
+ * Dieselbe Form fuer die Dokumente einer Seite (page_documents) und die
+ * eines Dokument-Bausteins (post_section_documents) – im Frontend ist beides
+ * dieselbe Download-Zeile.
+ */
+function documentObject(array $row, string $base): array
+{
+    return [
+        'label' => (string) $row['label'],
+        'href'  => $base . ltrim((string) $row['path'], '/'),
+        'mime'  => (string) $row['mime'],
+        'bytes' => $row['bytes'] === null ? null : (int) $row['bytes'],
+    ];
+}
+
+/**
+ * Liest die Tabelle eines Tabellen-Bausteins aus post_sections.data.
+ *
+ * Geschrieben wird die Spalte nur von der Schreib-API, die Zeilen und
+ * Spalten vorher prueft. Gelesen wird sie trotzdem misstrauisch: in der
+ * Spalte kann auch etwas von Hand stehen, und ein unbrauchbarer Wert soll
+ * den Abschnitt leer lassen statt die ganze Antwort zu verderben.
+ */
+function tableObject(?string $json): ?array
+{
+    if ($json === null || $json === '') {
+        return null;
+    }
+
+    $data = json_decode($json, true);
+    if (!is_array($data) || !isset($data['rows']) || !is_array($data['rows'])) {
+        return null;
+    }
+
+    $rows = [];
+    foreach ($data['rows'] as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $rows[] = array_map(static fn ($cell) => is_scalar($cell) ? (string) $cell : '', array_values($row));
+    }
+    if ($rows === []) {
+        return null;
+    }
+
+    return ['head' => !empty($data['head']), 'rows' => $rows];
+}
+
+/**
+ * Liest den Standort eines Karten-Bausteins aus post_sections.data.
+ *
+ * Misstrauisch wie tableObject(): fehlt etwas oder liegt es ausserhalb der
+ * Karte, kommt null zurueck, und der Abschnitt zeigt keine Karte statt einer
+ * irgendwo im Meer.
+ *
+ * @return array{lat: float, lng: float, zoom: int}|null
+ */
+function locationObject(?string $json): ?array
+{
+    if ($json === null || $json === '') {
+        return null;
+    }
+
+    $data = json_decode($json, true);
+    if (!is_array($data) || !is_numeric($data['lat'] ?? null) || !is_numeric($data['lng'] ?? null)) {
+        return null;
+    }
+
+    $lat = (float) $data['lat'];
+    $lng = (float) $data['lng'];
+    if ($lat < -85 || $lat > 85 || $lng < -180 || $lng > 180) {
+        return null;
+    }
+
+    $zoom = is_numeric($data['zoom'] ?? null) ? (int) $data['zoom'] : 16;
+
+    return ['lat' => $lat, 'lng' => $lng, 'zoom' => max(3, min(19, $zoom))];
+}
+
 /** Liest einen Ganzzahl-Parameter mit Unter- und Obergrenze. */
 function intParam(string $name, int $default, int $min, int $max): int
 {
@@ -144,13 +226,14 @@ function listCategories(PDO $db): void
 {
     // Ein Beitrag kann mehreren Kategorien angehoeren: einer Hauptkategorie
     // (posts.category_id) und weiteren ueber post_categories. Beide zaehlen,
-    // sonst zeigt die Filterleiste zu kleine Zahlen.
+    // sonst zeigt die Filterleiste zu kleine Zahlen. Events zaehlen nicht –
+    // die Zahl steht neben der Filterleiste der Beitraege.
     $rows = $db->query(
         'SELECT c.id, c.slug, c.name,
                 (SELECT COUNT(DISTINCT p.id)
                    FROM posts p
                    LEFT JOIN post_categories pc ON pc.post_id = p.id
-                  WHERE p.status = "published"
+                  WHERE p.status = "published" AND p.type = "post"
                     AND (p.category_id = c.id OR pc.category_id = c.id)
                 ) AS post_count
            FROM categories c
@@ -209,9 +292,10 @@ function listPosts(PDO $db, string $base): void
     }
 
     // Gesamtzahl zuerst – das Frontend braucht sie fuer die Blaetterleiste.
+    // Events liegen in derselben Tabelle, gehoeren aber nicht in diese Liste.
     $countSql = 'SELECT COUNT(*) FROM posts p
                    LEFT JOIN categories c ON c.id = p.category_id
-                  WHERE p.status = "published"' . $filter;
+                  WHERE p.status = "published" AND p.type = "post"' . $filter;
     $stmt = $db->prepare($countSql);
     $stmt->execute($params);
     $total = (int) $stmt->fetchColumn();
@@ -222,7 +306,7 @@ function listPosts(PDO $db, string $base): void
               FROM posts p
               LEFT JOIN categories c ON c.id = p.category_id
               LEFT JOIN media m      ON m.id = p.cover_id
-             WHERE p.status = "published"' . $filter . '
+             WHERE p.status = "published" AND p.type = "post"' . $filter . '
              ORDER BY p.published_at DESC, p.id DESC
              LIMIT :limit OFFSET :offset';
 
@@ -295,23 +379,30 @@ function listPosts(PDO $db, string $base): void
     ]);
 }
 
-/** GET /api/posts/{slug} – ein Beitrag mit Abschnitten und Bildern. */
-function showPost(PDO $db, string $slug, string $base): void
+/**
+ * GET /api/posts/{slug} – ein Beitrag mit Abschnitten und Bildern.
+ * GET /api/events/{slug} – ein Event, gleich aufgebaut, dazu Datum und Ort.
+ *
+ * Der Typ gehoert zur Abfrage: unter /beitraege/… soll kein Event
+ * auftauchen und umgekehrt, auch wenn beide in derselben Tabelle liegen.
+ */
+function showPost(PDO $db, string $slug, string $base, string $type = 'post'): void
 {
     $stmt = $db->prepare(
         'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.author, p.read_minutes,
+                p.event_date, p.event_time, p.location,
                 c.name AS category, c.slug AS category_slug,
                 m.path, m.alt, m.width, m.height
            FROM posts p
            LEFT JOIN categories c ON c.id = p.category_id
            LEFT JOIN media m      ON m.id = p.cover_id
-          WHERE p.slug = :slug AND p.status = "published"
+          WHERE p.slug = :slug AND p.status = "published" AND p.type = :type
           LIMIT 1'
     );
-    $stmt->execute([':slug' => $slug]);
+    $stmt->execute([':slug' => $slug, ':type' => $type]);
     $post = $stmt->fetch();
     if ($post === false) {
-        fail(404, 'Beitrag nicht gefunden.');
+        fail(404, $type === 'event' ? 'Event nicht gefunden.' : 'Beitrag nicht gefunden.');
     }
     $postId = (int) $post['id'];
 
@@ -325,14 +416,16 @@ function showPost(PDO $db, string $slug, string $base): void
     $stmt->execute([':id' => $postId]);
     $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Abschnitte und ihre Bilder in zwei Abfragen statt einer pro Abschnitt.
+    // Abschnitte, ihre Bilder und ihre Dokumente in drei Abfragen statt in
+    // zwei pro Abschnitt.
     $stmt = $db->prepare(
-        'SELECT id, kind, text FROM post_sections WHERE post_id = :id ORDER BY position, id'
+        'SELECT id, kind, text, url, data FROM post_sections WHERE post_id = :id ORDER BY position, id'
     );
     $stmt->execute([':id' => $postId]);
     $sections = $stmt->fetchAll();
 
-    $images = [];
+    $images    = [];
+    $documents = [];
     if ($sections !== []) {
         $ids          = array_column($sections, 'id');
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
@@ -347,16 +440,38 @@ function showPost(PDO $db, string $slug, string $base): void
         foreach ($stmt->fetchAll() as $row) {
             $images[(int) $row['section_id']][] = mediaObject($row, $base);
         }
+
+        $stmt = $db->prepare(
+            'SELECT sd.section_id, sd.label, m.path, m.mime, m.bytes
+               FROM post_section_documents sd
+               JOIN media m ON m.id = sd.media_id
+              WHERE sd.section_id IN (' . $placeholders . ')
+              ORDER BY sd.position, sd.id'
+        );
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll() as $row) {
+            $documents[(int) $row['section_id']][] = documentObject($row, $base);
+        }
     }
 
     $sectionData = [];
     foreach ($sections as $section) {
+        $id = (int) $section['id'];
         $sectionData[] = [
-            // Art des Bausteins: text, heading, quote, image, gallery.
-            // Beitraege aus der Migration haben durchgehend "text".
-            'kind'   => $section['kind'],
-            'text'   => $section['text'],
-            'images' => $images[(int) $section['id']] ?? [],
+            // Art des Bausteins: text, heading, quote, image, gallery, table,
+            // document, link, map. Beitraege aus der Migration haben
+            // durchgehend "text".
+            'kind'      => $section['kind'],
+            'text'      => $section['text'],
+            'images'    => $images[$id] ?? [],
+            // Nur beim Link-Baustein gesetzt, nur bei der Tabelle gefuellt,
+            // nur beim Dokument-Baustein nicht leer, nur bei der Karte ein
+            // Standort. Die Felder stehen trotzdem immer da, damit das
+            // Frontend nicht pruefen muss, ob die Antwort sie schon kennt.
+            'url'       => $section['url'],
+            'table'     => $section['kind'] === 'table' ? tableObject($section['data']) : null,
+            'documents' => $documents[$id] ?? [],
+            'location'  => $section['kind'] === 'map' ? locationObject($section['data']) : null,
         ];
     }
 
@@ -367,6 +482,10 @@ function showPost(PDO $db, string $slug, string $base): void
             'title'        => $post['title'],
             'excerpt'      => $post['excerpt'],
             'date'         => $post['published_at'],
+            // Bei Beitraegen leer, bei Events gesetzt.
+            'eventDate'    => $post['event_date'],
+            'eventTime'    => $post['event_time'],
+            'location'     => $post['location'],
             'author'       => $post['author'],
             'category'     => $post['category'],
             'categorySlug' => $post['category_slug'],
@@ -376,6 +495,44 @@ function showPost(PDO $db, string $slug, string $base): void
             'sections'     => $sectionData,
         ],
     ]);
+}
+
+/**
+ * GET /api/events – alle veroeffentlichten Events, das naechste zuerst.
+ *
+ * Ohne Blaettern und ohne Trennung in kommende und vergangene: das
+ * entscheidet die Seite mit dem heutigen Datum des Besuchers. Die Antwort
+ * wird eine Minute zwischengespeichert, und ein Event, das um Mitternacht
+ * in die Vergangenheit rutscht, soll nicht an der Uhr des Servers haengen.
+ */
+function listEvents(PDO $db, string $base): void
+{
+    $rows = $db->query(
+        'SELECT p.id, p.slug, p.title, p.excerpt, p.event_date, p.event_time, p.location,
+                c.name AS category,
+                m.path, m.alt, m.width, m.height
+           FROM posts p
+           LEFT JOIN categories c ON c.id = p.category_id
+           LEFT JOIN media m      ON m.id = p.cover_id
+          WHERE p.status = "published" AND p.type = "event"
+          ORDER BY p.event_date, p.id'
+    )->fetchAll();
+
+    $data = [];
+    foreach ($rows as $row) {
+        $data[] = [
+            'id'        => (int) $row['id'],
+            'slug'      => $row['slug'],
+            'title'     => $row['title'],
+            'excerpt'   => $row['excerpt'],
+            'eventDate' => $row['event_date'],
+            'eventTime' => $row['event_time'],
+            'location'  => $row['location'],
+            'category'  => $row['category'],
+            'cover'     => mediaObject($row, $base),
+        ];
+    }
+    send(['data' => $data]);
 }
 
 /** GET /api/pages/{slug} – eine statische Seite samt verlinkter Dokumente. */
@@ -402,12 +559,7 @@ function showPage(PDO $db, string $slug, string $base): void
 
     $documents = [];
     foreach ($stmt->fetchAll() as $row) {
-        $documents[] = [
-            'label' => $row['label'],
-            'href'  => $base . ltrim((string) $row['path'], '/'),
-            'mime'  => $row['mime'],
-            'bytes' => $row['bytes'] === null ? null : (int) $row['bytes'],
-        ];
+        $documents[] = documentObject($row, $base);
     }
 
     send([
@@ -904,6 +1056,9 @@ try {
         case 'posts':
             $item === null ? listPosts($db, $base) : showPost($db, $item, $base);
             break;
+        case 'events':
+            $item === null ? listEvents($db, $base) : showPost($db, $item, $base, 'event');
+            break;
         case 'categories':
             listCategories($db);
             break;
@@ -929,7 +1084,8 @@ try {
                 'data' => [
                     'name'      => 'vlt-Website API',
                     'endpoints' => [
-                        '/api/posts', '/api/posts/{slug}', '/api/categories',
+                        '/api/posts', '/api/posts/{slug}', '/api/events', '/api/events/{slug}',
+                        '/api/categories',
                         '/api/pages/{slug}', '/api/albums', '/api/albums/{slug}',
                         '/api/board', '/api/links',
                     ],

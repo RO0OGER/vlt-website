@@ -258,6 +258,12 @@ h1 {
   color: #97671a;
 }
 
+/* Events, deren Datum vorbei ist: noch sichtbar, aber nicht mehr dringend. */
+.badge-past {
+  background: var(--vlt-card);
+  color: var(--vlt-muted);
+}
+
 /* ── Aktionen ─────────────────────────────────────────────── */
 .row-actions {
   display: flex;

@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  OnInit,
   computed,
   inject,
   input,
@@ -11,18 +12,63 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AdminApi, AdminMedia, apiErrorText, mediaUsedBy } from '../admin-api';
+import { AdminApi, AdminMedia, MediaKind, apiErrorText, mediaUsedBy } from '../admin-api';
+
+/** Was die Auswahl in ihrer jeweiligen Betriebsart beschriftet und annimmt. */
+const WORDING: Record<MediaKind, {
+  title: string;
+  sub: string;
+  search: string;
+  describe: string;
+  upload: string;
+  uploading: string;
+  accept: string;
+  empty: string;
+  nothingFound: string;
+  loading: string;
+}> = {
+  image: {
+    title: 'Bild wählen',
+    sub: 'Aus dem Bestand oder neu hochladen.',
+    search: 'Suchen nach Bildtext oder Dateiname …',
+    describe: 'Bildtext (für Screenreader)',
+    upload: 'Bild hochladen',
+    uploading: 'Wird hochgeladen …',
+    accept: 'image/jpeg,image/png,image/webp,image/gif',
+    empty: 'Es sind noch keine Bilder vorhanden. Laden Sie oben das erste hoch.',
+    nothingFound: 'Kein Bild passt zu dieser Suche.',
+    loading: 'Bilder werden geladen …',
+  },
+  document: {
+    title: 'Dokument wählen',
+    sub: 'PDF, Word, Excel oder PowerPoint – aus dem Bestand oder neu hochladen.',
+    search: 'Suchen nach Bezeichnung oder Dateiname …',
+    describe: 'Bezeichnung (wird als Linktext vorgeschlagen)',
+    upload: 'Dokument hochladen',
+    uploading: 'Wird hochgeladen …',
+    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx',
+    empty: 'Es sind noch keine Dokumente vorhanden. Laden Sie oben das erste hoch.',
+    nothingFound: 'Kein Dokument passt zu dieser Suche.',
+    loading: 'Dokumente werden geladen …',
+  },
+};
 
 /**
- * Bildauswahl fuer den Block-Editor.
+ * Dateiauswahl fuer den Block-Editor.
  *
- * Zeigt den vorhandenen Bestand und nimmt neue Bilder entgegen. Beides in
+ * Zeigt den vorhandenen Bestand und nimmt neue Dateien entgegen. Beides in
  * einem Fenster, weil es beim Schreiben eines Beitrags dieselbe Frage ist:
- * "welches Bild kommt hier hin" – manchmal liegt es schon da, manchmal noch
+ * "welche Datei kommt hier hin" – manchmal liegt sie schon da, manchmal noch
  * auf dem Schreibtisch.
  *
- * Die Komponente laedt selbst und gibt nur das gewaehlte Bild nach oben.
- * Der Editor muss dadurch nichts ueber den Bildbestand wissen.
+ * `kind` entscheidet, ob Bilder oder Dokumente zur Wahl stehen. Getrennt und
+ * nicht alles in einem Topf: in einen Bildbaustein gehoert kein PDF, und in
+ * eine Download-Liste kein Foto. Die Beschriftungen stehen oben in WORDING –
+ * dort beieinander statt ueber die Vorlage verstreut, damit sich eine
+ * Betriebsart an einer Stelle lesen laesst.
+ *
+ * Die Komponente laedt selbst und gibt nur die gewaehlte Datei nach oben.
+ * Der Editor muss dadurch nichts ueber den Bestand wissen.
  */
 @Component({
   selector: 'app-media-picker',
@@ -31,24 +77,33 @@ import { AdminApi, AdminMedia, apiErrorText, mediaUsedBy } from '../admin-api';
   templateUrl: './media-picker.html',
   styleUrl: './media-picker.css',
 })
-export class MediaPicker implements AfterViewInit {
+export class MediaPicker implements OnInit, AfterViewInit {
   private readonly api = inject(AdminApi);
 
+  /** Bilder oder Dokumente? */
+  readonly kind = input<MediaKind>('image');
+
   /**
-   * Bilder, die im gerade offenen Beitrag stecken.
+   * Dateien, die im gerade offenen Beitrag stecken.
    *
-   * Die API prueft die Verwendung in der Datenbank – ein Bild, das eben
+   * Die API prueft die Verwendung in der Datenbank – eine Datei, die eben
    * erst in einen noch ungespeicherten Baustein gesetzt wurde, gilt dort
-   * zu Recht als frei. Loeschen liesse es sich also, und der Editor haette
-   * danach ein totes Bild stehen. Darum sperrt die Auswahl diese Bilder
-   * zusaetzlich selbst.
+   * zu Recht als frei. Loeschen liesse sie sich also, und der Editor haette
+   * danach einen toten Verweis stehen. Darum sperrt die Auswahl diese
+   * Dateien zusaetzlich selbst.
    */
   readonly usedIds = input<number[]>([]);
 
-  /** Das gewaehlte Bild. */
+  /** Die gewaehlte Datei. */
   readonly chosen = output<AdminMedia>();
   /** Abbrechen, ohne etwas zu waehlen. */
   readonly closed = output<void>();
+
+  /** Beschriftungen der aktuellen Betriebsart. */
+  readonly words = computed(() => WORDING[this.kind()]);
+
+  /** Dokumente stehen als Liste, Bilder als Kachelraster. */
+  readonly isDocuments = computed(() => this.kind() === 'document');
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
@@ -58,16 +113,16 @@ export class MediaPicker implements AfterViewInit {
   readonly uploading = signal(false);
   readonly error = signal('');
 
-  /** Bild, dessen Loeschung gerade bestaetigt werden soll. */
+  /** Datei, deren Loeschung gerade bestaetigt werden soll. */
   readonly pending = signal<AdminMedia | null>(null);
-  /** Bild, das gerade geloescht wird. */
+  /** Datei, die gerade geloescht wird. */
   readonly deleting = signal<number | null>(null);
   /** Fundstellen aus einer abgelehnten Loeschung. */
   readonly usedBy = signal<string[]>([]);
 
-  /** Suchbegriff, wird gegen Bildtext und Pfad geprueft. */
+  /** Suchbegriff, wird gegen Bezeichnung und Pfad geprueft. */
   search = '';
-  /** Bildtext des naechsten Uploads. */
+  /** Bezeichnung des naechsten Uploads. */
   uploadAlt = '';
 
   private readonly term = signal('');
@@ -81,8 +136,23 @@ export class MediaPicker implements AfterViewInit {
     );
   });
 
-  constructor() {
-    this.load();
+  /**
+   * Geladen wird erst hier und nicht im Konstruktor: dort steht `kind` noch
+   * auf dem Vorgabewert, und die Auswahl zeigte in einem Dokument-Baustein
+   * die Bilder.
+   */
+  ngOnInit(): void {
+    this.loading.set(true);
+    this.api.media(this.kind()).subscribe({
+      next: (media) => {
+        this.media.set(media);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(apiErrorText(err, 'Der Bestand liess sich nicht laden.'));
+        this.loading.set(false);
+      },
+    });
   }
 
   /**
@@ -93,20 +163,6 @@ export class MediaPicker implements AfterViewInit {
    */
   ngAfterViewInit(): void {
     this.panel()?.nativeElement.focus();
-  }
-
-  private load(): void {
-    this.loading.set(true);
-    this.api.media().subscribe({
-      next: (media) => {
-        this.media.set(media);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set(apiErrorText(err, 'Der Bildbestand liess sich nicht laden.'));
-        this.loading.set(false);
-      },
-    });
   }
 
   /** Sucht, waehrend getippt wird – der Bestand liegt ohnehin schon im Browser. */
@@ -139,8 +195,8 @@ export class MediaPicker implements AfterViewInit {
   }
 
   /**
-   * Nimmt die gewaehlte Datei entgegen und laedt sie hoch. Das fertige Bild
-   * wird gleich uebernommen: wer eben ein Bild ausgesucht hat, will es an
+   * Nimmt die gewaehlte Datei entgegen und laedt sie hoch. Die fertige Datei
+   * wird gleich uebernommen: wer eben eine ausgesucht hat, will sie an
    * dieser Stelle haben und nicht noch einmal anklicken.
    */
   onFile(event: Event): void {
@@ -151,20 +207,20 @@ export class MediaPicker implements AfterViewInit {
     this.error.set('');
     this.uploading.set(true);
 
-    this.api.upload(file, this.uploadAlt.trim()).subscribe({
-      next: (image) => {
+    this.api.upload(file, this.uploadAlt.trim(), this.kind()).subscribe({
+      next: (entry) => {
         this.uploading.set(false);
         this.uploadAlt = '';
         // Zuruecksetzen, sonst loest dieselbe Datei kein change-Ereignis
         // mehr aus und ein zweiter Versuch bliebe wirkungslos.
         input.value = '';
-        this.media.update((list) => [image, ...list]);
-        this.chosen.emit(image);
+        this.media.update((list) => [entry, ...list]);
+        this.chosen.emit(entry);
       },
       error: (err) => {
         this.uploading.set(false);
         input.value = '';
-        this.error.set(apiErrorText(err, 'Das Bild liess sich nicht hochladen.'));
+        this.error.set(apiErrorText(err, 'Die Datei liess sich nicht hochladen.'));
       },
     });
   }
@@ -174,9 +230,38 @@ export class MediaPicker implements AfterViewInit {
     return image.width && image.height ? `${image.width} × ${image.height}` : '';
   }
 
+  /** Dateiname ohne Ordner – die Zeile eines Dokuments zeigt ihn. */
+  filename(entry: AdminMedia): string {
+    return entry.path.split('/').pop() ?? entry.path;
+  }
+
+  /** Endung als Abzeichen: "PDF", "DOCX" … */
+  extension(entry: AdminMedia): string {
+    const value = this.filename(entry).split('.').pop() ?? '';
+    return value === entry.path ? 'Datei' : value.toUpperCase();
+  }
+
+  /** Zweite Zeile eines Dokuments: Dateiname und, wenn bekannt, Groesse. */
+  docMeta(entry: AdminMedia): string {
+    const size = this.filesize(entry);
+    return size === '' ? this.filename(entry) : `${this.filename(entry)} · ${size}`;
+  }
+
+  /** Dateigroesse als "412 KB" oder "1,2 MB". Leer, wenn sie fehlt. */
+  filesize(entry: AdminMedia): string {
+    const bytes = entry.bytes;
+    if (bytes === null || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+
+    const kb = bytes / 1024;
+    if (kb < 1000) return `${Math.round(kb)} KB`;
+
+    return `${(kb / 1024).toFixed(1).replace('.', ',')} MB`;
+  }
+
   // ── Löschen ────────────────────────────────────────────────
 
-  /** Steckt das Bild im gerade offenen Beitrag? Dann bleibt es hier. */
+  /** Steckt die Datei im gerade offenen Beitrag? Dann bleibt sie hier. */
   inOpenPost(image: AdminMedia): boolean {
     return this.usedIds().includes(image.id);
   }
@@ -207,9 +292,9 @@ export class MediaPicker implements AfterViewInit {
       },
       error: (err) => {
         this.deleting.set(null);
-        // 409 heisst: das Bild haengt noch irgendwo. Die Fundstellen sind
+        // 409 heisst: die Datei haengt noch irgendwo. Die Fundstellen sind
         // die eigentliche Antwort – ohne sie muesste man raten.
-        this.error.set(apiErrorText(err, 'Das Bild liess sich nicht löschen.'));
+        this.error.set(apiErrorText(err, 'Die Datei liess sich nicht löschen.'));
         this.usedBy.set(mediaUsedBy(err));
       },
     });

@@ -25,23 +25,28 @@
  * Dazu kommt das CMS unter /api/admin/. Es pflegt Beitraege und braucht
  * darum auf diesen Tabellen Schreibrechte:
  *
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON posts               TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_sections       TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_section_images TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_categories     TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT,         DELETE ON categories          TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON albums              TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, UPDATE, DELETE ON album_images        TO 'db_user'@'localhost';
- *   GRANT SELECT, INSERT, DELETE         ON media               TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON posts                  TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_sections          TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_section_images    TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_section_documents TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON post_categories        TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT,         DELETE ON categories             TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON albums                 TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, UPDATE, DELETE ON album_images           TO 'db_user'@'localhost';
+ *   GRANT SELECT, INSERT, DELETE         ON media                  TO 'db_user'@'localhost';
  *
  * categories ohne UPDATE: Kategorien werden angelegt und (solange sie
  * niemand verwendet) geloescht, aber nicht umbenannt.
  *
- * media braucht DELETE, damit sich Bilder im CMS aus dem Bestand entfernen
- * lassen. Die API laesst das nur zu, wenn das Bild nirgends mehr verwendet
+ * post_section_documents kam mit den Dokument-Bausteinen dazu (Migration
+ * 005). Ohne dieses Recht laesst sich ein Beitrag mit Downloads nicht
+ * speichern.
+ *
+ * media braucht DELETE, damit sich Dateien im CMS aus dem Bestand entfernen
+ * lassen. Die API laesst das nur zu, wenn die Datei nirgends mehr verwendet
  * wird – und das muss sie auch pruefen: alle Fremdschluessel auf media
- * stehen auf CASCADE oder SET NULL, die Datenbank wuerde ein benutztes Bild
- * also ohne Murren mitsamt seinen Verweisen entfernen.
+ * stehen auf CASCADE oder SET NULL, die Datenbank wuerde eine benutzte Datei
+ * also ohne Murren mitsamt ihren Verweisen entfernen.
  *
  * Alle uebrigen Tabellen bleiben fuer diesen Zugang schreibgeschuetzt.
  */

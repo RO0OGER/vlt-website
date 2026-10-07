@@ -194,6 +194,130 @@
   gap: 12px;
 }
 
+/* ── Dokumente ────────────────────────────────────────────────
+   Keine Kacheln: ein PDF hat keine Vorschau, und Name, Typ und Grösse
+   lesen sich in einer Zeile besser als in einem Quadrat. */
+.docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  background: #fff;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+  font: inherit;
+  text-align: left;
+  color: var(--vlt-text);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.doc:hover,
+.doc:focus-visible {
+  border-color: var(--vlt-nav);
+  box-shadow: 0 2px 10px rgba(47, 47, 127, 0.1);
+}
+
+/* Das Abzeichen trägt die Endung. Feste Breite, damit die Namen
+   untereinander auf derselben Höhe beginnen. */
+.doc-badge {
+  flex-shrink: 0;
+  width: 46px;
+  padding: 5px 0;
+  border-radius: 6px;
+  background: var(--vlt-bg);
+  border: 1px solid var(--vlt-rule);
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--vlt-nav);
+}
+
+.doc-text {
+  min-width: 0;
+}
+
+.doc-name,
+.doc-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.doc-meta {
+  margin-top: 2px;
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  color: var(--vlt-muted);
+}
+
+.doc-del,
+.doc-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  line-height: 0;
+}
+
+.doc-del {
+  border: 1px solid var(--vlt-rule);
+  background: #fff;
+  color: var(--vlt-muted);
+  cursor: pointer;
+}
+
+.doc-del:hover:not(:disabled) {
+  border-color: #e9b7b1;
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.doc-del:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.doc-lock {
+  color: #b9b9c6;
+}
+
+/* Die Rückfrage tritt an die Stelle des Löschknopfs – in einer Zeile ist
+   dafür Platz, anders als auf einer Kachel. */
+.doc-confirm {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 /* Bezugsrahmen fuer Loeschknopf und Rueckfrage, die auf der Kachel liegen. */
 .cell {
   position: relative;

@@ -1,0 +1,89 @@
+:host {
+  display: block;
+}
+
+.map {
+  position: relative;
+  overflow: hidden;
+  height: var(--map-height, 360px);
+  border: 1px solid var(--vlt-rule);
+  border-radius: 16px;
+  background: #e8e6df;
+  /* Die Kacheln sind fertige Bilder; markieren oder ziehen soll man sie nicht. */
+  user-select: none;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map.is-pickable .map-canvas {
+  cursor: crosshair;
+}
+
+.map-canvas:focus-visible {
+  outline: 3px solid var(--vlt-nav);
+  outline-offset: -3px;
+  border-radius: inherit;
+}
+
+.map-tiles {
+  position: absolute;
+  width: 1280px;
+  height: 1280px;
+  /* Ein Hauch entsaettigt: die bunten Standardkacheln von OpenStreetMap
+     stechen sonst neben den ruhigen Farben der Seite heraus. */
+  filter: saturate(0.75);
+}
+
+.map-tile {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  pointer-events: none;
+}
+
+.map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Die Spitze (unten Mitte) auf den Punkt setzen. */
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.3));
+  pointer-events: none;
+}
+
+.map-pin-body {
+  fill: var(--vlt-nav);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.map-pin-dot {
+  fill: var(--vlt-primary);
+}
+
+.map-credit {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 3px 8px;
+  border-top-left-radius: 8px;
+  background: rgb(255 255 255 / 0.85);
+  font-size: 11px;
+  color: var(--vlt-muted);
+  text-decoration: none;
+}
+
+.map-credit:hover {
+  color: var(--vlt-text);
+}
+
+@media (max-width: 768px) {
+  .map {
+    height: var(--map-height-mobile, 260px);
+    border-radius: 12px;
+  }
+}

@@ -534,6 +534,221 @@ select:focus {
   border-radius: 0 8px 8px 0;
 }
 
+/* ── Beigaben eines Bausteins ─────────────────────────────────
+   Adresse, Tabelle, Dokumente: was eine Art neben Text und Bild trägt. */
+
+/* Erläuterung unter einer Beigabe – wie .field-hint, nur im Block. */
+.block-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--vlt-muted);
+}
+
+.block-hint code {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--vlt-bg);
+}
+
+/* Knöpfe, die eine Zeile, Spalte oder Datei hinzufügen. */
+.block-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 6px 11px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--vlt-nav);
+  cursor: pointer;
+}
+
+.btn-small:hover:not(:disabled) {
+  background: var(--vlt-bg);
+  border-color: var(--vlt-nav);
+}
+
+.btn-small:disabled {
+  opacity: 0.45;
+  color: var(--vlt-muted);
+  cursor: default;
+}
+
+.block-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--vlt-text);
+  cursor: pointer;
+}
+
+.block-check input {
+  width: auto;
+  margin: 0;
+}
+
+/* Die Adresse ist eine Adresse: in Festbreite liest man Tippfehler. */
+.block-url {
+  font-family: var(--vlt-mono);
+  font-size: 13px;
+}
+
+/* ── Tabellenraster ───────────────────────────────────────────
+   Waagrecht scrollbar, damit eine breite Tabelle die Spalte nicht
+   auseinandertreibt. */
+.grid-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+}
+
+.grid-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.grid-table td,
+.grid-table th {
+  padding: 0;
+  border: 1px solid var(--vlt-rule);
+}
+
+/* Die Kopfleiste und die Spalte links tragen nur die Löschknöpfe – sie
+   sind Bedienung, nicht Inhalt, und darum schmal und grau. */
+.grid-corner,
+.grid-colhead,
+.grid-rowhead {
+  background: var(--vlt-bg);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.grid-corner,
+.grid-rowhead {
+  width: 28px;
+}
+
+.grid-colhead {
+  height: 24px;
+}
+
+.grid-del {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #b9b9c6;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.grid-del:hover:not(:disabled) {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.grid-del:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Die Zellen sind randlose Eingabefelder: das Raster kommt von der
+   Tabelle, nicht von jedem Feld einzeln. */
+.grid-cell {
+  min-width: 110px;
+  border: 0;
+  border-radius: 0;
+  padding: 7px 9px;
+  font-size: 13px;
+  background: transparent;
+}
+
+.grid-cell:focus {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: -2px;
+}
+
+/* Die Kopfzeile sieht im Editor so aus, wie sie später dasteht. */
+.grid-table tr.is-head .grid-cell {
+  font-weight: 700;
+  background: #fbfbfa;
+}
+
+/* ── Dokumentenliste ─────────────────────────────────────────── */
+.docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.doc-badge {
+  flex-shrink: 0;
+  width: 44px;
+  padding: 5px 0;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 6px;
+  background: var(--vlt-bg);
+  font-family: var(--vlt-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--vlt-nav);
+}
+
+.doc-fields {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-label {
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+/* Der Dateiname ist nur Beleg, welche Datei hier hängt – darum klein,
+   grau und in Festbreite. */
+.doc-file {
+  display: block;
+  margin-top: 3px;
+  padding-left: 2px;
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  color: var(--vlt-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-tools {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 /* ── Leere Fläche ─────────────────────────────────────────── */
 .canvas-empty {
   padding: 40px 20px;
@@ -644,6 +859,101 @@ select:focus {
 .status-toggle button.active {
   background: var(--vlt-nav);
   color: #fff;
+}
+
+/* ── Pflichtfelder ────────────────────────────────────────── */
+.required {
+  color: #c0392b;
+}
+
+/* Hinweis über den Bausteinen, solange einem Event die Karte fehlt. */
+.map-missing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid #f0d49b;
+  border-radius: 10px;
+  background: #fff8e8;
+  font-size: 13px;
+  color: #7a5200;
+}
+
+/* ── Karte ────────────────────────────────────────────────── */
+.geo-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.geo-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.geo-result:hover,
+.geo-result:focus-visible {
+  border-color: var(--vlt-nav);
+}
+
+.geo-result strong {
+  font-size: 13px;
+  color: var(--vlt-text);
+}
+
+.geo-result span {
+  font-size: 11.5px;
+  color: var(--vlt-muted);
+}
+
+/* Die Zoomknöpfe liegen auf der Karte, wie man es von Kartendiensten kennt. */
+.map-edit {
+  position: relative;
+  --map-height: 280px;
+  --map-height-mobile: 220px;
+}
+
+.map-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.map-zoom .tool {
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--vlt-text);
+}
+
+.map-zoom .tool:hover:not(:disabled) {
+  background: var(--vlt-bg);
 }
 
 /* ── Responsive ───────────────────────────────────────────── */

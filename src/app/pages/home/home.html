@@ -12,8 +12,8 @@
         <a routerLink="/beitrittserklaerung" class="btn btn-primary btn-lg">
           Mitglied werden »
         </a>
-        <a routerLink="/verbandsanlaesse" class="btn btn-ghost btn-lg">
-          Veranstaltungen ansehen
+        <a routerLink="/events" class="btn btn-ghost btn-lg">
+          Events ansehen
         </a>
       </div>
     </div>
@@ -78,6 +78,60 @@
     </div>
   </div>
 </section>
+
+<!-- ── Kommende Events ──────────────────────────────────────────
+     Bewusst anders als die Beiträge darüber: dunkles Band in der Farbe
+     des Kopfbereichs, Datumsblatt statt Titelbild. Ein Event ist ein
+     Termin, kein Artikel – das soll man sehen, bevor man liest. -->
+@if (eventsLoaded()) {
+  <section class="events" aria-labelledby="events-title">
+    <div class="vlt-container">
+      <div class="section-head">
+        <div>
+          <p class="vlt-eyebrow">· Kommende Events</p>
+          <h2 id="events-title">Verband Events</h2>
+        </div>
+        <a routerLink="/events" class="section-link">Alle Events ansehen »</a>
+      </div>
+
+      @if (events().length) {
+        <ul class="event-grid">
+          @for (e of events(); track e.slug) {
+            <li>
+              <a [routerLink]="['/events', e.slug]" class="event-card">
+                <div class="event-sheet" aria-hidden="true">
+                  <span class="event-sheet-month">{{ e.month }}</span>
+                  <span class="event-sheet-day">{{ e.day }}</span>
+                </div>
+                <div class="event-info">
+                  <h3 class="event-title">{{ e.title }}</h3>
+                  <p class="event-line">
+                    <time [attr.datetime]="e.date">{{ e.dateLabel }}</time>
+                    @if (e.time) {
+                      <span aria-hidden="true"> · </span>{{ e.time }}
+                    }
+                  </p>
+                  <p class="event-line event-place">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {{ e.location }}
+                  </p>
+                </div>
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="events-empty">
+          Zurzeit ist kein Event ausgeschrieben. Neue Anlässe erscheinen hier, sobald sie
+          feststehen.
+        </p>
+      }
+    </div>
+  </section>
+}
 
 <!-- ── Sponsoren ────────────────────────────────────────────── -->
 <section class="sponsors">

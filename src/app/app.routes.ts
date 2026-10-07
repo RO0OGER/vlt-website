@@ -186,6 +186,25 @@ export const routes: Routes = [
             title: 'Beitrag bearbeiten – VLT Admin',
           },
           {
+            /*
+             * Events teilen Liste und Editor mit den Beitraegen: dieselben
+             * Bausteine, dieselbe Arbeit. Was anders ist (Datum, Ort, Karte
+             * als Pflicht), schalten die Komponenten ueber `type`.
+             */
+            path: 'events',
+            loadComponent: () =>
+              import('./pages/admin/beitraege/beitraege-admin').then((m) => m.BeitraegeAdmin),
+            data: { type: 'event' },
+            title: 'Events – VLT Admin',
+          },
+          {
+            path: 'events/:id',
+            loadComponent: () =>
+              import('./pages/admin/beitraege/editor/beitrag-editor').then((m) => m.BeitragEditor),
+            data: { type: 'event' },
+            title: 'Event bearbeiten – VLT Admin',
+          },
+          {
             path: 'galerie',
             loadComponent: () =>
               import('./pages/admin/galerie/galerie-admin').then((m) => m.GalerieAdmin),
@@ -237,10 +256,29 @@ export const routes: Routes = [
     title: 'Beitrittserklärung – Verband',
   },
   {
-    path: 'verbandsanlaesse',
+    path: 'events',
+    loadComponent: () => import('./pages/events/events').then((m) => m.Events),
+    title: 'Events – Verband',
+  },
+  {
+    /*
+     * Ein Event ist ein Beitrag mit Datum, Ort und Karte – dieselbe
+     * Detailseite, nur mit anderer Quelle. Die Route-Daten sagen ihr,
+     * welche.
+     */
+    path: 'events/:slug',
     loadComponent: () =>
-      import('./pages/verbandsanlaesse/verbandsanlaesse').then((m) => m.Verbandsanlaesse),
-    title: 'Verbandsanlässe – Verband',
+      import('./pages/beitraege/beitrag-detail/beitrag-detail').then(
+        (m) => m.BeitragDetailPage,
+      ),
+    data: { type: 'event' },
+    title: 'Event – Verband',
+  },
+  {
+    // Die alte Adresse der eingebetteten guidle-Liste. Lesezeichen und
+    // Links von aussen sollen weiter ankommen.
+    path: 'verbandsanlaesse',
+    redirectTo: 'events',
   },
   {
     path: '**',

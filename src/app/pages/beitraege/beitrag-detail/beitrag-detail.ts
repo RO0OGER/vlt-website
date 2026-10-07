@@ -6,11 +6,19 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { ContentApi } from '../../../shared/content-api';
-import { PostView, SectionView, ViewImage, toPostView } from '../../../shared/post-view';
+import { MapView } from '../../../shared/map/map-view';
+import { PostView, SectionView, ViewImage, textSection, toPostView } from '../../../shared/post-view';
 
+/**
+ * Detailseite eines Beitrags – und eines Events.
+ *
+ * Beide bestehen aus denselben Bausteinen und sehen gleich aus. Ein Event
+ * zeigt statt Autor und Veroeffentlichungsdatum seine eigenen Angaben:
+ * wann und wo. Welches von beiden, steht in den Daten der Route.
+ */
 @Component({
   selector: 'app-beitrag-detail',
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, MapView],
   templateUrl: './beitrag-detail.html',
   styleUrl: './beitrag-detail.css',
 })
@@ -18,6 +26,12 @@ export class BeitragDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ContentApi);
   private readonly title = inject(Title);
+
+  readonly isEvent = this.route.snapshot.data['type'] === 'event';
+  /** Ruecksprung und Brotkrume. */
+  readonly listLink = this.isEvent ? '/events' : '/beitraege';
+  readonly listName = this.isEvent ? 'Events' : 'Beiträge';
+  readonly one = this.isEvent ? 'Event' : 'Beitrag';
 
   readonly post = signal<PostView | null>(null);
   readonly loading = signal(true);
@@ -39,7 +53,11 @@ export class BeitragDetailPage {
         // Ein Fehler (auch 404) wird zu null – die Vorlage zeigt dann
         // "nicht gefunden". Ohne catchError wuerde der Datenstrom enden
         // und ein spaeterer Wechsel des Beitrags nichts mehr laden.
-        switchMap((slug) => (slug ? this.api.post(slug).pipe(catchError(() => of(null))) : of(null))),
+        switchMap((slug) => {
+          if (!slug) return of(null);
+          const request = this.isEvent ? this.api.event(slug) : this.api.post(slug);
+          return request.pipe(catchError(() => of(null)));
+        }),
         takeUntilDestroyed(),
       )
       .subscribe((data) => {
@@ -63,7 +81,7 @@ export class BeitragDetailPage {
   readonly sections = computed<SectionView[]>(() => {
     const p = this.post();
     if (!p) return [];
-    return p.sections.length ? p.sections : [{ kind: 'text', text: p.excerpt, images: [] }];
+    return p.sections.length ? p.sections : [textSection(p.excerpt)];
   });
 
   /** Initialen fuer das Autorenzeichen, z. B. "Sandra Meier" → "SM". */

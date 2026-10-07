@@ -13,8 +13,8 @@
   >
     <header class="dialog-head">
       <div>
-        <h2 id="picker-title">Bild wählen</h2>
-        <p class="dialog-sub">Aus dem Bestand oder neu hochladen.</p>
+        <h2 id="picker-title">{{ words().title }}</h2>
+        <p class="dialog-sub">{{ words().sub }}</p>
       </div>
       <button type="button" class="icon-btn" (click)="close()" aria-label="Schliessen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -24,34 +24,30 @@
     </header>
 
     <div class="dialog-tools">
-      <label class="sr-only" for="picker-search">Bilder durchsuchen</label>
+      <label class="sr-only" for="picker-search">Bestand durchsuchen</label>
       <input
         id="picker-search"
         type="search"
         class="search"
-        placeholder="Suchen nach Bildtext oder Dateiname …"
+        [attr.placeholder]="words().search"
         [(ngModel)]="search"
         (ngModelChange)="onSearch($event)"
         autocomplete="off"
       />
 
       <div class="upload">
-        <label class="sr-only" for="picker-alt">Bildtext für den Upload</label>
+        <label class="sr-only" for="picker-alt">Bezeichnung für den Upload</label>
         <input
           id="picker-alt"
           type="text"
           class="alt-input"
-          placeholder="Bildtext (für Screenreader)"
+          [attr.placeholder]="words().describe"
           [(ngModel)]="uploadAlt"
           [disabled]="uploading()"
           maxlength="255"
         />
         <button type="button" class="btn-upload" (click)="pickFile()" [disabled]="uploading()">
-          @if (uploading()) {
-            Wird hochgeladen …
-          } @else {
-            Bild hochladen
-          }
+          {{ uploading() ? words().uploading : words().upload }}
         </button>
         <!-- Das echte Dateifeld bleibt verborgen: der Knopf daneben sieht
              aus wie der Rest der Oberfläche, das Systemfeld nicht. -->
@@ -59,7 +55,7 @@
           #fileInput
           type="file"
           class="sr-only"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          [attr.accept]="words().accept"
           (change)="onFile($event)"
         />
       </div>
@@ -75,7 +71,7 @@
             }
           </ul>
           <p class="used-by-hint">
-            Entfernen Sie das Bild zuerst an diesen Stellen, danach lässt es sich löschen.
+            Entfernen Sie die Datei zuerst an diesen Stellen, danach lässt sie sich löschen.
           </p>
         }
       </div>
@@ -83,15 +79,58 @@
 
     <div class="dialog-body">
       @if (loading()) {
-        <p class="dialog-note" aria-live="polite">Bilder werden geladen …</p>
+        <p class="dialog-note" aria-live="polite">{{ words().loading }}</p>
       } @else if (visible().length === 0) {
         <p class="dialog-note">
-          @if (media().length === 0) {
-            Es sind noch keine Bilder vorhanden. Laden Sie oben das erste hoch.
-          } @else {
-            Kein Bild passt zu dieser Suche.
-          }
+          {{ media().length === 0 ? words().empty : words().nothingFound }}
         </p>
+      } @else if (isDocuments()) {
+        <!-- Dokumente als Liste: eine Vorschau gibt es nicht, und der
+             Dateiname mit Typ und Grösse braucht die Breite der Zeile. -->
+        <ul class="docs">
+          @for (doc of visible(); track doc.id) {
+            <li class="doc-row">
+              <button type="button" class="doc" (click)="choose(doc)">
+                <span class="doc-badge" aria-hidden="true">{{ extension(doc) }}</span>
+                <span class="doc-text">
+                  <span class="doc-name">{{ doc.alt || filename(doc) }}</span>
+                  <span class="doc-meta">{{ docMeta(doc) }}</span>
+                </span>
+              </button>
+
+              @if (inOpenPost(doc)) {
+                <span class="doc-lock" title="Wird im offenen Beitrag verwendet">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </span>
+              } @else if (pending()?.id === doc.id) {
+                <span class="doc-confirm">
+                  <button type="button" class="mini mini-danger" (click)="confirmDelete()">Löschen</button>
+                  <button type="button" class="mini" (click)="cancelDelete()">Abbrechen</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="doc-del"
+                  (click)="askDelete(doc)"
+                  [disabled]="deleting() !== null"
+                  [attr.aria-label]="'Dokument ' + (doc.alt || filename(doc)) + ' löschen'"
+                >
+                  @if (deleting() === doc.id) {
+                    <span class="tile-spinner" aria-hidden="true"></span>
+                  } @else {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  }
+                </button>
+              }
+            </li>
+          }
+        </ul>
       } @else {
         <ul class="grid">
           @for (image of visible(); track image.id) {

@@ -45,19 +45,91 @@ export interface ApiPost {
 }
 
 /** Art eines Abschnitts. Beitraege aus der Migration sind durchgehend 'text'. */
-export type ApiSectionKind = 'text' | 'heading' | 'quote' | 'image' | 'gallery';
+export type ApiSectionKind =
+  | 'text'
+  | 'heading'
+  | 'quote'
+  | 'image'
+  | 'gallery'
+  | 'table'
+  | 'document'
+  | 'link'
+  | 'map';
 
-/** Ein Abschnitt der Detailseite: Art, Text und null bis zwei Bilder. */
+/** Standort eines Karten-Abschnitts. */
+export interface ApiLocation {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+/**
+ * Eine Datei zum Herunterladen. Gleich geformt fuer die Dokumente einer
+ * Seite und die eines Dokument-Abschnitts – im Frontend ist beides dieselbe
+ * Download-Zeile.
+ */
+export interface ApiDocument {
+  /** Linktext. */
+  label: string;
+  /** Adresse der Datei. */
+  href: string;
+  mime: string;
+  bytes: number | null;
+}
+
+/** Die Tabelle eines Tabellen-Abschnitts. Alle Zeilen sind gleich lang. */
+export interface ApiTable {
+  /** Erste Zeile ist die Kopfzeile. */
+  head: boolean;
+  rows: string[][];
+}
+
+/**
+ * Ein Abschnitt der Detailseite.
+ *
+ * Text und Bilder traegt jede Art; `url`, `table`, `documents` und
+ * `location` sind nur bei der Art gefuellt, zu der sie gehoeren. Beitraege,
+ * die vor den neuen Arten gespeichert wurden, haben dort null
+ * beziehungsweise eine leere Liste.
+ */
 export interface ApiSection {
   kind: ApiSectionKind;
   text: string;
   images: ApiImage[];
+  /** Ziel des Link-Abschnitts. */
+  url: string | null;
+  table: ApiTable | null;
+  documents: ApiDocument[];
+  /** Standort des Karten-Abschnitts. Fehlt bei Antworten von vor Migration 006. */
+  location?: ApiLocation | null;
 }
 
+/**
+ * Beitrag oder Event mit allen Abschnitten. Bei Beitraegen sind die drei
+ * Event-Felder null.
+ */
 export interface ApiPostDetail extends ApiPost {
   author: string | null;
   categories: string[];
   sections: ApiSection[];
+  eventDate?: string | null;
+  eventTime?: string | null;
+  location?: string | null;
+}
+
+/** Ein Event in der Uebersicht. */
+export interface ApiEvent {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  /** ISO-Datum (YYYY-MM-DD) des Events. */
+  eventDate: string;
+  /** Zeit als freier Text, z. B. "17.30 – 21.00 Uhr". */
+  eventTime: string | null;
+  location: string;
+  category: string | null;
+  cover: ApiImage | null;
 }
 
 export interface ApiCategory {
@@ -89,7 +161,7 @@ export interface ApiPage {
   /** Bereits bereinigtes HTML aus der Datenbank. */
   body: string;
   updatedAt: string;
-  documents: { label: string; href: string; mime: string; bytes: number | null }[];
+  documents: ApiDocument[];
 }
 
 export interface ApiBoardMember {
@@ -146,6 +218,16 @@ export class ContentApi {
 
   post(slug: string): Observable<ApiPostDetail> {
     return this.unwrap<ApiPostDetail>(`${API}/posts/${encodeURIComponent(slug)}`);
+  }
+
+  /** Alle veroeffentlichten Events, das frueheste zuerst. */
+  events(): Observable<ApiEvent[]> {
+    return this.unwrap<ApiEvent[]>(`${API}/events`);
+  }
+
+  /** Ein Event – gleich aufgebaut wie ein Beitrag, dazu Datum und Ort. */
+  event(slug: string): Observable<ApiPostDetail> {
+    return this.unwrap<ApiPostDetail>(`${API}/events/${encodeURIComponent(slug)}`);
   }
 
   categories(): Observable<ApiCategory[]> {

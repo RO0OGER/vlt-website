@@ -46,9 +46,9 @@ export const NAV: NavItem[] = [
     ],
   },
   {
-    label: 'Verband organisiert',
+    label: 'Events',
     children: [
-      { t: 'Verbandsanlässe', d: 'Anlässe und Kurse des Verbands', link: '/verbandsanlaesse' },
+      { t: 'Events', d: 'Anlässe und Kurse des Verbands', link: '/events' },
       { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
       { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
       { t: 'Beiträge', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },

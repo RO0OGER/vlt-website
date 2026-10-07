@@ -18,6 +18,45 @@ export function formatDateLong(iso: string): string {
   return `${d.getDate()}. ${MONTHS_DE_LONG[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/**
+ * Wie formatDateLong, mit Wochentag davor: "Mittwoch, 4. November 2026".
+ *
+ * Fuer Events. Wer sich einen Termin eintraegt, fragt als Erstes, auf
+ * welchen Tag er faellt.
+ */
+export function formatDateWithWeekday(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${WEEKDAYS_DE[d.getDay()]}, ${formatDateLong(iso)}`;
+}
+
+/** Heutiges Datum als JJJJ-MM-TT, nach der Uhr des Besuchers. */
+export function todayIso(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/** Wochentage, mit Sonntag beginnend – so zaehlt Date.getDay(). */
+const WEEKDAYS_DE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+/** Abgekuerzte Monate fuer das Datumsblatt der Eventkarten. */
+export const MONTHS_DE_SHORT = [
+  'Jan',
+  'Feb',
+  'Mär',
+  'Apr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dez',
+];
+
 /** Ausgeschriebene Monate fuer Datumsangaben in der Oberflaeche. */
 export const MONTHS_DE_LONG = [
   'Januar',

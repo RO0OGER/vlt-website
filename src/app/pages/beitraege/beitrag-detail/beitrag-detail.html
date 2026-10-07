@@ -1,8 +1,8 @@
 @if (loading()) {
   <section class="page">
     <div class="vlt-container">
-      <p class="vlt-eyebrow">· Beiträge</p>
-      <p class="not-found-text" aria-live="polite">Beitrag wird geladen…</p>
+      <p class="vlt-eyebrow">· {{ listName }}</p>
+      <p class="not-found-text" aria-live="polite">{{ one }} wird geladen…</p>
     </div>
   </section>
 } @else if (post(); as p) {
@@ -12,9 +12,11 @@
       <nav class="crumbs" aria-label="Brotkrumen">
         <a routerLink="/">Startseite</a>
         <span aria-hidden="true">»</span>
-        <a routerLink="/beitraege">Beiträge</a>
+        <a [routerLink]="listLink">{{ listName }}</a>
         <span aria-hidden="true">»</span>
-        <span class="crumb-current">{{ p.cat }}</span>
+        <!-- Ein Event hat oft keine Kategorie; dann steht sein Name da
+             statt "Ohne Kategorie". -->
+        <span class="crumb-current">{{ isEvent ? p.title : p.cat }}</span>
       </nav>
 
       <!-- ── Hauptbild ────────────────────────────────────────── -->
@@ -32,21 +34,53 @@
     <div class="column">
       <h1>{{ p.title }}</h1>
 
-      <div class="meta">
-        <div class="cats">
-          @for (c of categories(); track c) {
-            <span class="cat">{{ c }}</span>
+      @if (p.event; as ev) {
+        @if (categories().length) {
+          <div class="meta">
+            <div class="cats">
+              @for (c of categories(); track c) {
+                <span class="cat">{{ c }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Wann und wo – das, wofür man die Seite eines Events aufruft.
+             Darum gross und gleich unter dem Titel, nicht in einer
+             Nebenzeile. -->
+        <dl class="event-facts">
+          <div class="event-fact">
+            <dt>Datum</dt>
+            <dd><time [attr.datetime]="ev.date">{{ ev.dateLabel }}</time></dd>
+          </div>
+          @if (ev.time) {
+            <div class="event-fact">
+              <dt>Zeit</dt>
+              <dd>{{ ev.time }}</dd>
+            </div>
           }
+          <div class="event-fact">
+            <dt>Ort</dt>
+            <dd>{{ ev.location }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <div class="meta">
+          <div class="cats">
+            @for (c of categories(); track c) {
+              <span class="cat">{{ c }}</span>
+            }
+          </div>
+          <div class="byline">
+            @if (p.author; as author) {
+              <span class="avatar" aria-hidden="true">{{ initials(author) }}</span>
+              <span class="author">{{ author }}</span>
+              <span class="sep" aria-hidden="true">·</span>
+            }
+            <time [attr.datetime]="p.date">{{ dateLabel() }}</time>
+          </div>
         </div>
-        <div class="byline">
-          @if (p.author; as author) {
-            <span class="avatar" aria-hidden="true">{{ initials(author) }}</span>
-            <span class="author">{{ author }}</span>
-            <span class="sep" aria-hidden="true">·</span>
-          }
-          <time [attr.datetime]="p.date">{{ dateLabel() }}</time>
-        </div>
-      </div>
+      }
 
       <!-- ── Abschnitte ─────────────────────────────────────────
            Anzahl und Bebilderung kommen aus den Daten: null, ein
@@ -75,6 +109,105 @@
                 <ng-container *ngTemplateOutlet="bilder; context: { $implicit: s }" />
                 @if (s.text) {
                   <p class="section-caption">{{ s.text }}</p>
+                }
+              }
+              @case ('table') {
+                @if (s.table; as t) {
+                  <!-- Waagrecht scrollbar: eine breite Tabelle soll den
+                       Textsatz nicht auseinanderziehen. -->
+                  <div class="section-table-wrap">
+                    <table class="section-table">
+                      @if (t.head.length) {
+                        <thead>
+                          <tr>
+                            @for (cell of t.head; track $index) {
+                              <th scope="col">{{ cell }}</th>
+                            }
+                          </tr>
+                        </thead>
+                      }
+                      <tbody>
+                        @for (row of t.rows; track $index) {
+                          <tr>
+                            @for (cell of row; track $index) {
+                              <td>{{ cell }}</td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  @if (s.text) {
+                    <p class="section-caption">{{ s.text }}</p>
+                  }
+                }
+              }
+              @case ('document') {
+                @if (s.text) {
+                  <p class="section-doctitle">{{ s.text }}</p>
+                }
+                <ul class="section-docs">
+                  @for (doc of s.documents; track doc.href) {
+                    <li>
+                      <!-- download bittet den Browser, die Datei abzulegen
+                           statt sie anzuzeigen. Ein PDF öffnet er trotzdem
+                           oft selbst – das entscheidet er, nicht die Seite. -->
+                      <a class="section-doc" [href]="doc.href" download>
+                        <span class="doc-badge" aria-hidden="true">{{ doc.type }}</span>
+                        <span class="doc-text">
+                          <span class="doc-label">{{ doc.label }}</span>
+                          @if (doc.size) {
+                            <span class="doc-size">{{ doc.type }}, {{ doc.size }}</span>
+                          }
+                        </span>
+                        <span class="doc-arrow" aria-hidden="true">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+              @case ('link') {
+                <p class="section-link">
+                  <!-- Ein Verweis nach aussen öffnet ein neues Fenster;
+                       rel="noopener" nimmt der Zielseite dabei den Zugriff
+                       auf dieses hier. -->
+                  <a
+                    [href]="s.href"
+                    [attr.target]="s.external ? '_blank' : null"
+                    [attr.rel]="s.external ? 'noopener' : null"
+                  >
+                    {{ s.linkLabel }}
+                    <span aria-hidden="true">»</span>
+                  </a>
+                </p>
+              }
+              @case ('map') {
+                @if (s.map; as spot) {
+                  <app-map-view
+                    [lat]="spot.lat"
+                    [lng]="spot.lng"
+                    [zoom]="spot.zoom"
+                    [label]="'Karte: ' + (s.text || 'Standort')"
+                  />
+                  <div class="section-map-foot">
+                    @if (s.text) {
+                      <p class="section-map-address">{{ s.text }}</p>
+                    }
+                    <p class="section-map-links">
+                      <a [href]="spot.routeHref" target="_blank" rel="noopener">
+                        Route planen <span aria-hidden="true">»</span>
+                      </a>
+                      <a [href]="spot.mapHref" target="_blank" rel="noopener">
+                        Grössere Karte <span aria-hidden="true">»</span>
+                      </a>
+                    </p>
+                  </div>
                 }
               }
               @default {
@@ -119,8 +252,8 @@
       </ng-template>
 
       <div class="foot">
-        <a routerLink="/beitraege" class="foot-link">
-          Alle Beiträge ansehen <span aria-hidden="true">»</span>
+        <a [routerLink]="listLink" class="foot-link">
+          Alle {{ listName }} ansehen <span aria-hidden="true">»</span>
         </a>
       </div>
     </div>
@@ -128,13 +261,13 @@
 } @else {
   <section class="page">
     <div class="vlt-container">
-      <p class="vlt-eyebrow">· Beiträge</p>
-      <h1>Beitrag nicht gefunden</h1>
+      <p class="vlt-eyebrow">· {{ listName }}</p>
+      <h1>{{ one }} nicht gefunden</h1>
       <p class="not-found-text">
-        Dieser Beitrag existiert nicht oder wurde entfernt. Prüfen Sie die Adresse
+        Diese Seite existiert nicht oder wurde entfernt. Prüfen Sie die Adresse
         oder kehren Sie zur Übersicht zurück.
       </p>
-      <p><a routerLink="/beitraege" class="btn btn-primary btn-lg">Alle Beiträge »</a></p>
+      <p><a [routerLink]="listLink" class="btn btn-primary btn-lg">Alle {{ listName }} »</a></p>
     </div>
   </section>
 }

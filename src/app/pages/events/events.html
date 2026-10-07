@@ -1,0 +1,93 @@
+<section class="page">
+  <div class="vlt-container">
+    <p class="vlt-eyebrow">· Events</p>
+    <h1>Treffen, lernen, austauschen.</h1>
+    <p class="lead">
+      Anlässe und Kurse des Verbands – mit Datum, Ort und allem, was Sie für die
+      Anmeldung brauchen.
+    </p>
+
+    @if (loading()) {
+      <p class="note" aria-live="polite">Events werden geladen…</p>
+    } @else if (failed()) {
+      <p class="note">Die Events konnten nicht geladen werden. Bitte laden Sie die Seite neu.</p>
+    } @else {
+
+      <!-- ── Kommende ─────────────────────────────────────────── -->
+      <h2 class="group-title">Kommende Events</h2>
+
+      @if (upcoming().length) {
+        <ul class="list">
+          @for (e of upcoming(); track e.slug; let first = $first) {
+            <li>
+              <a [routerLink]="['/events', e.slug]" class="event" [class.is-next]="first">
+                <!-- Das Datumsblatt: wann, auf einen Blick. Für Screenreader
+                     steht das ausgeschriebene Datum im time-Element daneben. -->
+                <div class="sheet" aria-hidden="true">
+                  <span class="sheet-month">{{ e.month }}</span>
+                  <span class="sheet-day">{{ e.day }}</span>
+                  <span class="sheet-year">{{ e.year }}</span>
+                </div>
+
+                <div class="event-body">
+                  @if (first) {
+                    <span class="next-badge">Nächstes Event</span>
+                  }
+                  <h3 class="event-title">{{ e.title }}</h3>
+                  <p class="event-meta">
+                    <time [attr.datetime]="e.date">{{ e.dateLabel }}</time>
+                    @if (e.time) {
+                      <span aria-hidden="true">·</span>
+                      <span>{{ e.time }}</span>
+                    }
+                  </p>
+                  <p class="event-place">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {{ e.location }}
+                  </p>
+                  @if (e.excerpt) {
+                    <p class="event-excerpt">{{ e.excerpt }}</p>
+                  }
+                  <span class="event-more">Details und Anfahrt <span aria-hidden="true">»</span></span>
+                </div>
+
+                @if (e.cover.src) {
+                  <img class="event-img" [src]="e.cover.src" [alt]="e.cover.alt" loading="lazy" />
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">
+          Zurzeit ist kein Event ausgeschrieben. Neue Anlässe erscheinen hier, sobald sie
+          feststehen – oder abonnieren Sie den <a routerLink="/newsletter">Newsletter</a>.
+        </p>
+      }
+
+      <!-- ── Vergangene ───────────────────────────────────────── -->
+      @if (past().length) {
+        <h2 class="group-title group-title-past">Vergangene Events</h2>
+        <ul class="past">
+          @for (e of visiblePast(); track e.slug) {
+            <li>
+              <a [routerLink]="['/events', e.slug]" class="past-item">
+                <time class="past-date" [attr.datetime]="e.date">{{ e.day }}. {{ e.month }} {{ e.year }}</time>
+                <span class="past-title">{{ e.title }}</span>
+                <span class="past-place">{{ e.location }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+        @if (hiddenPast() > 0) {
+          <button type="button" class="more-past" (click)="showAllPast.set(true)">
+            {{ hiddenPast() === 1 ? 'Ein weiteres' : hiddenPast() + ' weitere' }} anzeigen
+          </button>
+        }
+      }
+    }
+  </div>
+</section>

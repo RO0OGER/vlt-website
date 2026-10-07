@@ -25,6 +25,22 @@ Zum Prüfen der API kannst du zusätzlich `seed-smoke.sql` einspielen –
 das legt je einen Testbeitrag, eine Testseite und ein Testalbum an.
 Wie du die wieder löschst, steht oben in der Datei.
 
+Danach die Dateien aus `api/migrations/` **in der Nummernfolge** einspielen,
+ebenfalls über *Importieren*. `schema.sql` ist der Stand vom Anfang; alles,
+was seither dazugekommen ist, steht als eigene Migration daneben:
+
+| Datei | Bringt |
+|---|---|
+| `002_users.sql` | Zugänge und Anmelde-Token für `/admin` |
+| `003_post_blocks.sql` | Art eines Beitragsabschnitts (Text, Bild, Zitat …) |
+| `004_user_management.sql` | Startpasswort-Zwang für neue Zugänge |
+| `005_post_blocks_tabelle_dokument_link.sql` | Tabelle, Dokumentenliste und Link als Bausteine |
+| `006_events.sql` | Events (Datum, Zeit, Ort) und den Karten-Baustein |
+
+Jede Datei nennt in ihrem Kopf die `GRANT`-Zeilen, die der Datenbankbenutzer
+zusätzlich braucht. Fehlen sie, lädt die Seite zwar, aber das CMS kann nicht
+speichern.
+
 ## 2. Datenbankbenutzer nur zum Lesen anlegen
 
 Die API ändert nie einen Inhalt. Geschrieben wird einzig beim An-
