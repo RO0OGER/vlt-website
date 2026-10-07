@@ -1,5 +1,6 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../shared/auth.service';
 import { NAV } from '../../shared/nav';
 
 @Component({
@@ -11,6 +12,13 @@ import { NAV } from '../../shared/nav';
 export class Header {
   /** Top-level navigation with hover mega-menu children. */
   readonly nav = NAV;
+
+  /**
+   * Angemeldet? Dann fuehrt der Knopf oben rechts direkt ins CMS statt zur
+   * Anmeldung. Der Merker sagt nur, dass ein Token gespeichert ist – ob es
+   * noch gilt, prueft der Waechter des Admin-Bereichs beim Betreten.
+   */
+  readonly loggedIn = inject(AuthService).isLoggedIn;
 
   /** Desktop: index of the hovered nav item whose panel is open (null = closed). */
   readonly hover = signal<number | null>(null);
