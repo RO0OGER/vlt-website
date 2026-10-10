@@ -92,28 +92,204 @@
           />
         </div>
 
+        @if (isEvent) {
+          <div class="field">
+            <label for="event-kicker">Untertitel</label>
+            <input
+              id="event-kicker"
+              type="text"
+              [(ngModel)]="kicker"
+              (ngModelChange)="touch()"
+              placeholder="z. B. Workshop / Weiterbildung"
+              maxlength="120"
+            />
+            <p class="field-hint">Steht klein über dem Titel. Optional.</p>
+          </div>
+        }
+
         <div class="field">
-          <label for="post-excerpt">Anrisstext</label>
+          <label for="post-excerpt">{{ isEvent ? 'Kurzbeschreibung' : 'Anrisstext' }}</label>
           <textarea
             id="post-excerpt"
             rows="2"
             [(ngModel)]="excerpt"
             (ngModelChange)="touch()"
-            placeholder="Kurze Zusammenfassung für die Übersichtskarte …"
+            [placeholder]="isEvent ? 'Worum geht es? Zwei, drei Sätze für die Übersicht und als Einleitung …' : 'Kurze Zusammenfassung für die Übersichtskarte …'"
             maxlength="2000"
           ></textarea>
         </div>
 
-        <p class="blocks-label">Inhalt</p>
+        @if (isEvent) {
+          <!-- ── Eckdaten des Anlasses ──────────────────────────
+               Gesammelt an einer Stelle, in der Reihenfolge, in der man
+               einen Anlass ausschreibt: wann, wo, was kostet es, wie
+               meldet man sich an. Nur Datum und Ort sind Pflicht. -->
+          <section class="facts" aria-labelledby="facts-title">
+            <p class="blocks-label" id="facts-title">Eckdaten</p>
 
-        @if (!hasMap()) {
-          <!-- Pflicht bei Events. Ohne den Hinweis stünde erst beim
-               Speichern da, was fehlt. -->
-          <p class="map-missing" role="status">
-            Ein Event braucht einen Karten-Baustein mit dem Standort.
-            <button type="button" class="btn-small" (click)="addBlock('map')">+ Karte anhängen</button>
-          </p>
+            <fieldset class="facts-group">
+              <legend>
+                <span class="facts-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </span>
+                Wann
+              </legend>
+              <div class="facts-row facts-row-3">
+                <div class="field">
+                  <label for="event-date">Datum <span class="required" aria-hidden="true">*</span></label>
+                  <input id="event-date" type="date" [(ngModel)]="eventDate" (ngModelChange)="touch()" required aria-required="true" />
+                </div>
+                <div class="field">
+                  <label for="event-start">Beginn</label>
+                  <input id="event-start" type="time" [(ngModel)]="eventStart" (ngModelChange)="touch()" />
+                </div>
+                <div class="field">
+                  <label for="event-end">Ende</label>
+                  <input id="event-end" type="time" [(ngModel)]="eventEnd" (ngModelChange)="touch()" />
+                </div>
+              </div>
+              <p class="field-hint">Ohne Beginn gilt der Anlass als ganztägig. Das Ende ist freiwillig.</p>
+            </fieldset>
+
+            <fieldset class="facts-group">
+              <legend>
+                <span class="facts-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                </span>
+                Wo
+              </legend>
+              <div class="field">
+                <label for="event-location">Ort <span class="required" aria-hidden="true">*</span></label>
+                <input
+                  id="event-location"
+                  type="text"
+                  [(ngModel)]="location"
+                  (ngModelChange)="touch()"
+                  placeholder="z. B. Kantonsschule Zug"
+                  maxlength="160"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="facts-row">
+                <div class="field">
+                  <label for="event-street">Strasse und Nr.</label>
+                  <input id="event-street" type="text" [(ngModel)]="street" (ngModelChange)="touch()" placeholder="z. B. Lüssiweg 24" maxlength="160" />
+                </div>
+                <div class="field">
+                  <label for="event-city">PLZ und Ort</label>
+                  <input id="event-city" type="text" [(ngModel)]="city" (ngModelChange)="touch()" placeholder="z. B. 6300 Zug" maxlength="120" />
+                </div>
+              </div>
+              <p class="field-hint">Aus der Adresse entsteht auf der Website der Link «Route planen».</p>
+            </fieldset>
+
+            <fieldset class="facts-group">
+              <legend>
+                <span class="facts-icon facts-icon-text" aria-hidden="true">CHF</span>
+                Preise
+              </legend>
+              @for (price of prices(); track price.uid; let p = $index) {
+                <div class="price-row">
+                  <input
+                    type="text"
+                    [ngModel]="price.label"
+                    (ngModelChange)="setPrice(price.uid, 'label', $event)"
+                    [placeholder]="pricePlaceholder(p)"
+                    [attr.aria-label]="'Bezeichnung Preis ' + (p + 1)"
+                    maxlength="80"
+                  />
+                  <input
+                    type="text"
+                    [ngModel]="price.value"
+                    (ngModelChange)="setPrice(price.uid, 'value', $event)"
+                    placeholder="z. B. CHF 40 oder gratis"
+                    [attr.aria-label]="'Betrag Preis ' + (p + 1)"
+                    maxlength="80"
+                  />
+                  <button
+                    type="button"
+                    class="tool tool-danger"
+                    (click)="removePrice(price.uid)"
+                    [attr.aria-label]="'Preis ' + (p + 1) + ' entfernen'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              }
+              <div class="block-actions">
+                <button type="button" class="btn-small" (click)="addPrice()" [disabled]="prices().length >= maxPrices">
+                  + Preisstufe
+                </button>
+              </div>
+              <p class="field-hint">Leere Zeilen werden nicht gespeichert. Ohne Preise erscheint auf der Website kein Preisfeld.</p>
+            </fieldset>
+
+            <fieldset class="facts-group">
+              <legend>
+                <span class="facts-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                    <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                </span>
+                Anmeldung und Zutritt
+              </legend>
+              <div class="field">
+                <label for="event-registration">Link zur Anmeldung</label>
+                <input
+                  id="event-registration"
+                  type="text"
+                  [(ngModel)]="registrationUrl"
+                  (ngModelChange)="touch()"
+                  placeholder="https://… oder mailto:anmeldung@…"
+                  maxlength="500"
+                />
+                <p class="field-hint">Ein Formular, eine Website oder eine E-Mail-Adresse mit «mailto:». Leer lassen: kein Anmeldeknopf.</p>
+              </div>
+              <div class="field">
+                <label for="event-audience">Zielgruppe</label>
+                <input
+                  id="event-audience"
+                  type="text"
+                  [(ngModel)]="audience"
+                  (ngModelChange)="touch()"
+                  placeholder="z. B. Lehrpersonen, Schulleitungen"
+                  maxlength="255"
+                />
+                <p class="field-hint">Mehrere durch Komma trennen – jede erscheint als eigenes Schild.</p>
+              </div>
+              <div class="field">
+                <label for="event-admission">Zutrittskonditionen</label>
+                <input
+                  id="event-admission"
+                  type="text"
+                  [(ngModel)]="admission"
+                  (ngModelChange)="touch()"
+                  placeholder="z. B. Anmeldung bis 1. November erforderlich"
+                  maxlength="500"
+                />
+              </div>
+              <label class="switch">
+                <input type="checkbox" [(ngModel)]="membersOnly" (ngModelChange)="touch()" />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span class="switch-text">
+                  <strong>Nur für Mitglieder</strong>
+                  <span>Erscheint als Schild in der Übersicht und auf der Seite des Anlasses.</span>
+                </span>
+              </label>
+            </fieldset>
+          </section>
         }
+
+        <p class="blocks-label">Inhalt</p>
 
         <!-- Ablegestelle ganz oben. Die Stellen sind im Ruhezustand schmal
              und wachsen, sobald etwas gezogen wird – so sind sie leicht zu
@@ -510,7 +686,7 @@
                     </p>
                   } @else {
                     <p class="block-hint">
-                      Adresse eingeben und suchen{{ isEvent && location ? ' – ohne Eingabe wird nach dem Ort des Events gesucht' : '' }}.
+                      Adresse eingeben und suchen.
                       Die Karte erscheint, sobald ein Standort gesetzt ist.
                     </p>
                   }
@@ -546,46 +722,6 @@
       <aside class="meta" aria-labelledby="meta-title">
         <p class="col-title" id="meta-title">Einstellungen</p>
 
-        @if (isEvent) {
-          <div class="field">
-            <label for="event-date">Datum <span class="required" aria-hidden="true">*</span></label>
-            <input
-              id="event-date"
-              type="date"
-              [(ngModel)]="eventDate"
-              (ngModelChange)="touch()"
-              required
-              aria-required="true"
-            />
-          </div>
-
-          <div class="field">
-            <label for="event-time">Zeit</label>
-            <input
-              id="event-time"
-              type="text"
-              [(ngModel)]="eventTime"
-              (ngModelChange)="touch()"
-              placeholder="z. B. 17.30 – 21.00 Uhr"
-              maxlength="60"
-            />
-          </div>
-
-          <div class="field">
-            <label for="event-location">Ort <span class="required" aria-hidden="true">*</span></label>
-            <input
-              id="event-location"
-              type="text"
-              [(ngModel)]="location"
-              (ngModelChange)="touch()"
-              placeholder="z. B. Kantonsschule Zug"
-              maxlength="160"
-              required
-              aria-required="true"
-            />
-            <p class="field-hint">Steht auf der Karte in der Übersicht. Den genauen Standort zeigt der Karten-Baustein.</p>
-          </div>
-        }
 
         <div class="field">
           <span class="field-label" id="cover-label">Titelbild</span>

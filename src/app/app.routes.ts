@@ -27,7 +27,7 @@ export const routes: Routes = [
     path: 'beitraege',
     loadComponent: () =>
       import('./pages/beitraege/beitraege').then((m) => m.Beitraege),
-    title: 'Beiträge – Verband',
+    title: 'News – Verband',
   },
   {
     /*
@@ -167,6 +167,13 @@ export const routes: Routes = [
             title: 'Dashboard – VLT Admin',
           },
           {
+            // Titelbild der Startseite – austauschbar, ohne Code anzufassen.
+            path: 'startseite',
+            loadComponent: () =>
+              import('./pages/admin/startseite/startseite-admin').then((m) => m.StartseiteAdmin),
+            title: 'Startseite – VLT Admin',
+          },
+          {
             path: 'beitraege',
             loadComponent: () =>
               import('./pages/admin/beitraege/beitraege-admin').then((m) => m.BeitraegeAdmin),
@@ -188,8 +195,8 @@ export const routes: Routes = [
           {
             /*
              * Events teilen Liste und Editor mit den Beitraegen: dieselben
-             * Bausteine, dieselbe Arbeit. Was anders ist (Datum, Ort, Karte
-             * als Pflicht), schalten die Komponenten ueber `type`.
+             * Bausteine, dieselbe Arbeit. Was anders ist (Datum, Ort, Preise,
+             * Anmeldung …), schalten die Komponenten ueber `type`.
              */
             path: 'events',
             loadComponent: () =>
@@ -240,12 +247,21 @@ export const routes: Routes = [
     title: 'Newsletter-Anmeldung – Verband',
   },
   {
-    path: 'austrittserklaerung',
+    /*
+     * Mutation: Austritt oder Wechsel der Mitgliedschaft. Die Seite hiess
+     * frueher Austrittserklaerung; die Komponente behaelt ihren Namen, die
+     * alte Adresse leitet weiter.
+     */
+    path: 'mutation',
     loadComponent: () =>
       import('./pages/austrittserklaerung/austrittserklaerung').then(
         (m) => m.Austrittserklaerung,
       ),
-    title: 'Austrittserklärung – Verband',
+    title: 'Mutation – Verband',
+  },
+  {
+    path: 'austrittserklaerung',
+    redirectTo: 'mutation',
   },
   {
     path: 'beitrittserklaerung',
@@ -258,21 +274,18 @@ export const routes: Routes = [
   {
     path: 'events',
     loadComponent: () => import('./pages/events/events').then((m) => m.Events),
-    title: 'Events – Verband',
+    title: 'Verbandsanlässe – Verband',
   },
   {
     /*
-     * Ein Event ist ein Beitrag mit Datum, Ort und Karte – dieselbe
-     * Detailseite, nur mit anderer Quelle. Die Route-Daten sagen ihr,
-     * welche.
+     * Ein Verbandsanlass. Im CMS ist er ein Beitrag mit Zusatzangaben, auf
+     * der Seite hat er eine eigene Detailseite: Datum, Preise und Anmeldung
+     * stehen dort neben dem Inhalt, nicht darin.
      */
     path: 'events/:slug',
     loadComponent: () =>
-      import('./pages/beitraege/beitrag-detail/beitrag-detail').then(
-        (m) => m.BeitragDetailPage,
-      ),
-    data: { type: 'event' },
-    title: 'Event – Verband',
+      import('./pages/events/event-detail/event-detail').then((m) => m.EventDetail),
+    title: 'Verbandsanlass – Verband',
   },
   {
     // Die alte Adresse der eingebetteten guidle-Liste. Lesezeichen und

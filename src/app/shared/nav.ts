@@ -48,17 +48,16 @@ export const NAV: NavItem[] = [
   {
     label: 'Events',
     children: [
-      { t: 'Events', d: 'Anlässe und Kurse des Verbands', link: '/events' },
-      { t: 'Kostenübersicht', d: 'Beiträge und Tarife im Überblick', link: '/teilnehmerkosten' },
+      { t: 'Verbandsanlässe', d: 'Anlässe und Kurse des Verbands', link: '/events' },
       { t: 'Bildergalerien', d: 'Eindrücke vergangener Anlässe', link: '/galerie' },
-      { t: 'Beiträge', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },
+      { t: 'Kosten', d: 'Teilnehmerkosten im Überblick', link: '/teilnehmerkosten' },
     ],
   },
   {
     label: 'Verband',
     children: [
-      { t: 'Unser Vorstand', d: 'Personen und Zuständigkeiten', link: '/vorstand' },
-      { t: 'Beitrittserklärung', d: 'Mitglied werden beim Verband', link: '/beitrittserklaerung' },
+      { t: 'Vorstand', d: 'Personen und Zuständigkeiten', link: '/vorstand' },
+      { t: 'News', d: 'Neuigkeiten und Mitteilungen', link: '/beitraege' },
     ],
   },
   {
@@ -68,8 +67,9 @@ export const NAV: NavItem[] = [
     link: '/kontakt',
     children: [
       { t: 'Kontakt', d: 'Adresse und Ansprechpersonen', link: '/kontakt' },
-      { t: 'Newsletter-Anmeldung', d: 'Neuigkeiten per E-Mail erhalten', link: '/newsletter' },
-      { t: 'Austrittserklärung', d: 'Austritt oder Änderung der Mitgliedschaft', link: '/austrittserklaerung' },
+      { t: 'Beitrittserklärung', d: 'Mitglied werden beim Verband', link: '/beitrittserklaerung' },
+      { t: 'Mutation', d: 'Mitgliedschaft ändern oder austreten', link: '/mutation' },
+      { t: 'Newsletter', d: 'Neuigkeiten per E-Mail erhalten', link: '/newsletter' },
     ],
   },
 ];

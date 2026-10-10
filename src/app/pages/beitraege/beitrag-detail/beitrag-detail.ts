@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
@@ -6,19 +5,20 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { ContentApi } from '../../../shared/content-api';
-import { MapView } from '../../../shared/map/map-view';
-import { PostView, SectionView, ViewImage, textSection, toPostView } from '../../../shared/post-view';
+import { PostSections } from '../../../shared/post-sections/post-sections';
+import { PostView, SectionView, textSection, toPostView } from '../../../shared/post-view';
 
 /**
- * Detailseite eines Beitrags – und eines Events.
+ * Detailseite eines Beitrags.
  *
- * Beide bestehen aus denselben Bausteinen und sehen gleich aus. Ein Event
- * zeigt statt Autor und Veroeffentlichungsdatum seine eigenen Angaben:
- * wann und wo. Welches von beiden, steht in den Daten der Route.
+ * Die Abschnitte setzt PostSections – dieselbe Komponente, die auch die
+ * Detailseite der Verbandsanlaesse benutzt. Die Anlaesse haben drumherum
+ * ihre eigene Seite (pages/events/event-detail), weil sie mit Datum, Preisen
+ * und Anmeldung anders aufgebaut sind als ein Artikel.
  */
 @Component({
   selector: 'app-beitrag-detail',
-  imports: [RouterLink, NgTemplateOutlet, MapView],
+  imports: [RouterLink, PostSections],
   templateUrl: './beitrag-detail.html',
   styleUrl: './beitrag-detail.css',
 })
@@ -27,11 +27,10 @@ export class BeitragDetailPage {
   private readonly api = inject(ContentApi);
   private readonly title = inject(Title);
 
-  readonly isEvent = this.route.snapshot.data['type'] === 'event';
   /** Ruecksprung und Brotkrume. */
-  readonly listLink = this.isEvent ? '/events' : '/beitraege';
-  readonly listName = this.isEvent ? 'Events' : 'Beiträge';
-  readonly one = this.isEvent ? 'Event' : 'Beitrag';
+  readonly listLink = '/beitraege';
+  readonly listName = 'Beiträge';
+  readonly one = 'Beitrag';
 
   readonly post = signal<PostView | null>(null);
   readonly loading = signal(true);
@@ -55,8 +54,7 @@ export class BeitragDetailPage {
         // und ein spaeterer Wechsel des Beitrags nichts mehr laden.
         switchMap((slug) => {
           if (!slug) return of(null);
-          const request = this.isEvent ? this.api.event(slug) : this.api.post(slug);
-          return request.pipe(catchError(() => of(null)));
+          return this.api.post(slug).pipe(catchError(() => of(null)));
         }),
         takeUntilDestroyed(),
       )
@@ -93,8 +91,4 @@ export class BeitragDetailPage {
       .slice(0, 2);
   }
 
-  /** Das Layout kennt eine und zwei Bilder – mehr zeigt die Seite nicht. */
-  images(section: { images: ViewImage[] }): ViewImage[] {
-    return section.images.slice(0, 2);
-  }
 }

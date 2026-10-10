@@ -21,9 +21,15 @@
  * Adresse, einer Tabelle, einer Liste von Dokumenten oder einem Standort.
  * Was zu welcher Art gehoert, steht in BLOCK_KINDS gleich hier unten.
  *
- * Events sind Beitraege mit type = 'event' (Migration 006). Sie laufen ueber
- * /api/admin/events durch dieselben Funktionen und haben zusaetzlich Datum,
- * Zeit und Ort sowie einen Karten-Baustein als Pflicht.
+ * Events haben seit Migration 008 eigene Tabellen (events, event_sections …)
+ * und laufen ueber /api/admin/events. Ihr Inhalt besteht aus denselben
+ * Bausteinen, darum dieselben Funktionen – welche Tabellen sie beschreiben,
+ * steht in CONTENT_TABLES (index.php). Dazu kommen die Angaben eines
+ * Anlasses: Datum, Beginn und Ende, Ort mit Adresse, Preise, Anmeldung,
+ * Zielgruppe und Zutritt.
+ *
+ * Dazu kommt unter /api/admin/home das Titelbild der Startseite
+ * (Migration 007).
  */
 
 declare(strict_types=1);
@@ -42,9 +48,9 @@ declare(strict_types=1);
  *   'documents' post_section_documents: Dateien zum Herunterladen
  *   'location'  post_sections.data: Breite, Laenge und Zoom als JSON
  *
- * Kommt eine Art dazu, ist hier, in der ENUM-Spalte post_sections.kind
- * (Migrationen 003, 005 und 006) und in src/app/shared/blocks.ts etwas zu
- * tun.
+ * Kommt eine Art dazu, ist hier, in den ENUM-Spalten post_sections.kind
+ * (Migrationen 003, 005 und 006) und event_sections.kind (Migration 008)
+ * und in src/app/shared/blocks.ts etwas zu tun.
  */
 const BLOCK_KINDS = [
     'text'     => ['images' => 0, 'payload' => 'none'],
@@ -59,19 +65,28 @@ const BLOCK_KINDS = [
 ];
 
 /**
- * Die beiden Arten von Eintraegen in posts und die Adresse, unter der sie
- * im CMS angesprochen werden. Der Router setzt den Typ aus der Adresse;
- * aus dem Body wird er nie gelesen – ein Beitrag kann so nicht versehentlich
- * zum Event werden.
+ * Beitraege und Events und die Adresse, unter der sie im CMS angesprochen
+ * werden. Der Router setzt den Typ aus der Adresse; aus dem Body wird er nie
+ * gelesen.
  */
 const POST_TYPES = [
     'posts'  => 'post',
     'events' => 'event',
 ];
 
+// Die Tabellen je Typ (CONTENT_TABLES) stehen in index.php: die Lese-API
+// braucht sie genauso.
+
 /** Zoomstufen der Karte: weiter weg zeigt keinen Ort mehr, naeher gibt es nicht. */
 const MAP_ZOOM_MIN = 3;
 const MAP_ZOOM_MAX = 19;
+
+/**
+ * Grenzen der Preisliste eines Events. Mehr als eine Handvoll Stufen liest
+ * niemand; wer eine ganze Tarifordnung hat, legt sie als Dokument bei.
+ */
+const EVENT_MAX_PRICES = 8;
+const EVENT_PRICE_TEXT_MAX = 80;
 
 /** Laengste erlaubte Textmenge in einem Block. */
 const BLOCK_TEXT_MAX = 20000;
@@ -317,14 +332,17 @@ function slugify(string $text): string
  * Sorgt dafuer, dass der Slug einmalig ist. Ist er vergeben, wird -2, -3 …
  * angehaengt. $ignoreId ist der Beitrag, der gerade gespeichert wird – sein
  * eigener Slug darf natuerlich bleiben.
+ *
+ * $table ist posts oder events (aus CONTENT_TABLES, nie aus der Anfrage):
+ * beide haben ihre eigenen Adressen, /beitraege/… und /events/….
  */
-function uniqueSlug(PDO $db, string $base, ?int $ignoreId): string
+function uniqueSlug(PDO $db, string $base, ?int $ignoreId, string $table = 'posts'): string
 {
     $base = substr($base, 0, 190);
     if ($base === '') {
-        $base = 'beitrag';
+        $base = $table === 'events' ? 'event' : 'beitrag';
     }
-    $stmt = $db->prepare('SELECT 1 FROM posts WHERE slug = :slug AND id <> :id LIMIT 1');
+    $stmt = $db->prepare('SELECT 1 FROM `' . $table . '` WHERE slug = :slug AND id <> :id LIMIT 1');
 
     $slug = $base;
     for ($n = 2; $n < 200; $n++) {
@@ -380,12 +398,21 @@ function urlField(mixed $raw, int $nr): string
     if ($url === '') {
         invalid('Baustein ' . $nr . ' ist ein Link und braucht darum eine Adresse.');
     }
+    return safeUrl($url, 'von Baustein ' . $nr);
+}
 
+/**
+ * Die Regel aus urlField fuer jede Adresse, die als href auf der Seite
+ * landet – auch fuer den Anmeldeknopf eines Events. $where ergaenzt die
+ * Fehlermeldung ("von Baustein 3", "der Anmeldung").
+ */
+function safeUrl(string $url, string $where): string
+{
     // Steht ein Schema da, muss es ein unbedenkliches sein.
     if (preg_match('#^[a-z][a-z0-9+.\-]*:#i', $url) === 1) {
         if (preg_match('#^(https?://|mailto:)#i', $url) !== 1) {
             invalid(
-                'Die Adresse von Baustein ' . $nr . ' ist nicht erlaubt. Verwenden Sie '
+                'Die Adresse ' . $where . ' ist nicht erlaubt. Verwenden Sie '
                 . 'http://, https://, mailto: oder eine Adresse der eigenen Seite wie "/beitraege".'
             );
         }
@@ -655,20 +682,154 @@ function blocksField(PDO $db, array $body): array
 }
 
 /**
- * Ein Event braucht eine Karte mit dem Standort.
- *
- * Der Ort steht zwar in den Kopfdaten, aber wer hinfahren will, braucht mehr
- * als den Namen eines Schulhauses. Die Pruefung steht hier und nicht nur im
- * Editor: sonst genuegte ein Direktaufruf, um sie zu umgehen.
+ * Liest eine Uhrzeit (HH:MM). Leer ist erlaubt und wird zu null – ein
+ * Anlass ohne Beginn dauert den ganzen Tag oder steht noch nicht fest.
  */
-function requireMapBlock(array $blocks): void
+function timeField(array $body, string $key, string $label): ?string
 {
-    foreach ($blocks as $block) {
-        if ($block['kind'] === 'map') {
-            return;
-        }
+    $raw = $body[$key] ?? '';
+    if ($raw === '') {
+        return null;
     }
-    invalid('Ein Event braucht einen Karten-Baustein mit dem Standort.');
+    if (!is_string($raw) || preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $raw) !== 1) {
+        invalid($label . ' muss als Uhrzeit wie 17:30 stehen.');
+    }
+    /** @var string $raw */
+    return $raw;
+}
+
+/**
+ * Liest die Preisstufen eines Events: je eine Bezeichnung und ein Betrag,
+ * beides als Text ("Mitglieder" – "gratis"). Ganz leere Zeilen fallen weg,
+ * halb leere werden abgewiesen – ein Preis ohne Bezeichnung sagt nichts.
+ *
+ * @return array<int, array{label: string, value: string}>
+ */
+function pricesField(array $body): array
+{
+    $raw = $body['prices'] ?? [];
+    if (!is_array($raw)) {
+        invalid('Die Preise müssen als Liste kommen.');
+    }
+
+    $prices = [];
+    foreach (array_values($raw) as $index => $entry) {
+        if (!is_array($entry)) {
+            invalid('Preis ' . ($index + 1) . ' ist unbrauchbar.');
+        }
+        $label = textField($entry, 'label', EVENT_PRICE_TEXT_MAX);
+        $value = textField($entry, 'value', EVENT_PRICE_TEXT_MAX);
+        if ($label === '' && $value === '') {
+            continue;
+        }
+        if ($label === '' || $value === '') {
+            invalid('Preis ' . ($index + 1) . ' braucht eine Bezeichnung und einen Betrag.');
+        }
+        $prices[] = ['label' => $label, 'value' => $value];
+    }
+    if (count($prices) > EVENT_MAX_PRICES) {
+        invalid('Ein Event darf höchstens ' . EVENT_MAX_PRICES . ' Preisstufen haben.');
+    }
+    return $prices;
+}
+
+/**
+ * Baut die geprueften Kopfdaten eines Beitrags oder Events aus dem Body.
+ *
+ * Beide haben Titel, Anriss, Titelbild, Kategorien und Status. Dazu kommt
+ * beim Beitrag Datum und Autor, beim Event alles, was einen Anlass
+ * ausmacht – Datum und Ort sind dort Pflicht.
+ *
+ * Die Schluessel des Ergebnisses sind genau die Spalten aus
+ * CONTENT_TABLES[$type]['columns'] plus slug.
+ */
+function contentFields(PDO $db, array $body, ?int $id, string $type): array
+{
+    $title  = textField($body, 'title', 255, true);
+    $status = $body['status'] ?? 'draft';
+    if ($status !== 'draft' && $status !== 'published') {
+        invalid('Der Status muss "draft" oder "published" sein.');
+    }
+
+    /*
+     * Die Adresse entsteht immer aus dem Titel – von Hand setzen laesst sie
+     * sich nicht. Das haelt Titel und Adresse beieinander und nimmt der
+     * Redaktion eine Entscheidung ab, die sie nie treffen wollte.
+     *
+     * uniqueSlug haengt -2, -3 … an, wenn der Name schon vergeben ist, und
+     * laesst dem Eintrag dabei seine eigene Adresse (deshalb $id). Beim
+     * erneuten Speichern kommt darum wieder dasselbe heraus.
+     */
+    $common = [
+        'slug'        => uniqueSlug($db, slugify($title), $id, CONTENT_TABLES[$type]['main']),
+        'title'       => $title,
+        'excerpt'     => textField($body, 'excerpt', 2000),
+        'cover_id'    => requireRow($db, 'media', idField($body, 'coverId'), 'Das gewählte Titelbild'),
+        'category_id' => requireRow($db, 'categories', idField($body, 'categoryId'), 'Die gewählte Kategorie'),
+        'status'      => $status,
+    ];
+
+    return $common + ($type === 'event' ? eventFields($body) : postOnlyFields($body));
+}
+
+/** Was nur ein Beitrag hat: Datum, Autor, Lesedauer. */
+function postOnlyFields(array $body): array
+{
+    $readRaw     = $body['readMinutes'] ?? null;
+    $readMinutes = null;
+    if ($readRaw !== null && $readRaw !== '') {
+        $minutes = idField(['v' => $readRaw], 'v');
+        if ($minutes === null || $minutes > 255) {
+            invalid('Die Lesedauer muss zwischen 1 und 255 Minuten liegen.');
+        }
+        $readMinutes = $minutes;
+    }
+
+    $author = textField($body, 'author', 120);
+
+    return [
+        'published_at' => dateField($body, 'date'),
+        'author'       => $author === '' ? null : $author,
+        'read_minutes' => $readMinutes,
+    ];
+}
+
+/**
+ * Was nur ein Event hat (Migration 008): die Angaben eines Anlasses, wie er
+ * frueher bei guidle stand – ohne den Plan.
+ */
+function eventFields(array $body): array
+{
+    $start = timeField($body, 'eventStart', 'Der Beginn');
+    $end   = timeField($body, 'eventEnd', 'Das Ende');
+    if ($end !== null && $start === null) {
+        invalid('Ein Ende ohne Beginn ergibt keinen Sinn. Tragen Sie zuerst den Beginn ein.');
+    }
+    // Gleich lange Zeichenketten im Format HH:MM vergleichen sich wie Zeiten.
+    if ($start !== null && $end !== null && $end <= $start) {
+        invalid('Das Ende muss nach dem Beginn liegen.');
+    }
+
+    $registration = textField($body, 'registrationUrl', BLOCK_URL_MAX);
+    $prices       = pricesField($body);
+    // Optionale Texte: leer wird zu null, damit die Spalten nicht mit
+    // leeren Zeichenketten und NULL zwei Arten von "nichts" fuehren.
+    $optional = static fn (string $value): ?string => $value === '' ? null : $value;
+
+    return [
+        'kicker'           => $optional(textField($body, 'kicker', 120)),
+        'event_date'       => dateField($body, 'eventDate'),
+        'event_start'      => $start,
+        'event_end'        => $end,
+        'location'         => textField($body, 'location', 160, true),
+        'street'           => $optional(textField($body, 'street', 160)),
+        'city'             => $optional(textField($body, 'city', 120)),
+        'prices'           => $prices === [] ? null : json_encode($prices, JSON_UNESCAPED_UNICODE),
+        'registration_url' => $registration === '' ? null : safeUrl($registration, 'der Anmeldung'),
+        'audience'         => $optional(textField($body, 'audience', 255)),
+        'admission'        => $optional(textField($body, 'admission', 500)),
+        'members_only'     => ($body['membersOnly'] ?? false) === true ? 1 : 0,
+    ];
 }
 
 /** Steht in irgendeiner Zelle der Tabelle etwas? */
@@ -702,94 +863,41 @@ function categoryIdsField(PDO $db, array $body): array
 }
 
 /**
- * Baut die geprueften Kopfdaten eines Beitrags oder Events aus dem Body.
- *
- * Bei Events sind Datum und Ort Pflicht. Ein Veroeffentlichungsdatum kommt
- * dafuer nicht aus dem Formular: es ist der Tag des ersten Speicherns (siehe
- * adminCreatePost). Ein Event hat genau ein Datum, das zaehlt – zwei
- * Datumsfelder im Editor fuehrten nur zur Frage, welches gemeint ist.
- */
-function postFields(PDO $db, array $body, ?int $postId, string $type): array
-{
-    $title  = textField($body, 'title', 255, true);
-    $status = $body['status'] ?? 'draft';
-    if ($status !== 'draft' && $status !== 'published') {
-        invalid('Der Status muss "draft" oder "published" sein.');
-    }
-
-    $readRaw     = $body['readMinutes'] ?? null;
-    $readMinutes = null;
-    if ($readRaw !== null && $readRaw !== '') {
-        $minutes = idField(['v' => $readRaw], 'v');
-        if ($minutes === null || $minutes > 255) {
-            invalid('Die Lesedauer muss zwischen 1 und 255 Minuten liegen.');
-        }
-        $readMinutes = $minutes;
-    }
-
-    /*
-     * Die Adresse entsteht immer aus dem Titel – von Hand setzen laesst sie
-     * sich nicht. Das haelt Titel und Adresse beieinander und nimmt der
-     * Redaktion eine Entscheidung ab, die sie nie treffen wollte.
-     *
-     * uniqueSlug haengt -2, -3 … an, wenn der Name schon vergeben ist, und
-     * laesst dem Beitrag dabei seine eigene Adresse (deshalb $postId). Beim
-     * erneuten Speichern kommt darum wieder dasselbe heraus.
-     */
-    $slug = uniqueSlug($db, slugify($title), $postId);
-
-    $author = textField($body, 'author', 120);
-
-    $isEvent   = $type === 'event';
-    $eventTime = $isEvent ? textField($body, 'eventTime', 60) : '';
-
-    return [
-        'slug'         => $slug,
-        'title'        => $title,
-        'excerpt'      => textField($body, 'excerpt', 2000),
-        'published_at' => $isEvent ? null : dateField($body, 'date'),
-        'event_date'   => $isEvent ? dateField($body, 'eventDate') : null,
-        'event_time'   => $eventTime === '' ? null : $eventTime,
-        'location'     => $isEvent ? textField($body, 'location', 160, true) : null,
-        'author'       => $author === '' ? null : $author,
-        'read_minutes' => $readMinutes,
-        'cover_id'     => requireRow($db, 'media', idField($body, 'coverId'), 'Das gewählte Titelbild'),
-        'category_id'  => requireRow($db, 'categories', idField($body, 'categoryId'), 'Die gewählte Kategorie'),
-        'status'       => $status,
-    ];
-}
-
-/**
- * Schreibt Bloecke und Kategorien eines Beitrags neu.
+ * Schreibt Bloecke und Kategorien eines Beitrags oder Events neu – in die
+ * Tabellen seines Typs.
  *
  * Bewusst "alles loeschen, alles neu": die Bloecke haben ueber das Formular
  * hinweg keine stabile Identitaet – der Redaktor schiebt sie um, loescht und
  * fuegt ein. Ein Abgleich Zeile fuer Zeile waere aufwendiger und
  * fehleranfaelliger als das Neuschreiben einer Handvoll Zeilen.
  */
-function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds): void
+function writeRelations(PDO $db, string $type, int $id, array $blocks, array $categoryIds): void
 {
-    $stmt = $db->prepare('DELETE FROM post_sections WHERE post_id = :id');
-    $stmt->execute([':id' => $postId]);
-    // post_section_images und post_section_documents haengen per
-    // ON DELETE CASCADE daran und gehen mit.
+    // Tabellen- und Spaltennamen aus CONTENT_TABLES – feste Zeichenketten.
+    $t     = CONTENT_TABLES[$type];
+    $owner = $t['owner'];
+
+    $stmt = $db->prepare('DELETE FROM ' . $t['sections'] . ' WHERE ' . $owner . ' = :id');
+    $stmt->execute([':id' => $id]);
+    // Bilder und Dokumente der Abschnitte haengen per ON DELETE CASCADE
+    // daran und gehen mit.
 
     $insertSection = $db->prepare(
-        'INSERT INTO post_sections (post_id, position, kind, text, url, data)
-         VALUES (:post, :position, :kind, :text, :url, :data)'
+        'INSERT INTO ' . $t['sections'] . ' (' . $owner . ', position, kind, text, url, data)
+         VALUES (:owner, :position, :kind, :text, :url, :data)'
     );
     $insertImage = $db->prepare(
-        'INSERT INTO post_section_images (section_id, media_id, position)
+        'INSERT INTO ' . $t['images'] . ' (section_id, media_id, position)
          VALUES (:section, :media, :position)'
     );
     $insertDocument = $db->prepare(
-        'INSERT INTO post_section_documents (section_id, media_id, label, position)
+        'INSERT INTO ' . $t['documents'] . ' (section_id, media_id, label, position)
          VALUES (:section, :media, :label, :position)'
     );
 
     foreach ($blocks as $position => $block) {
         $insertSection->execute([
-            ':post'     => $postId,
+            ':owner'    => $id,
             ':position' => $position,
             ':kind'     => $block['kind'],
             ':text'     => $block['text'],
@@ -824,22 +932,28 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
         }
     }
 
-    $stmt = $db->prepare('DELETE FROM post_categories WHERE post_id = :id');
-    $stmt->execute([':id' => $postId]);
+    $stmt = $db->prepare('DELETE FROM ' . $t['categories'] . ' WHERE ' . $owner . ' = :id');
+    $stmt->execute([':id' => $id]);
 
     $insertCategory = $db->prepare(
-        'INSERT INTO post_categories (post_id, category_id) VALUES (:post, :category)'
+        'INSERT INTO ' . $t['categories'] . ' (' . $owner . ', category_id) VALUES (:owner, :category)'
     );
     foreach ($categoryIds as $categoryId) {
-        $insertCategory->execute([':post' => $postId, ':category' => $categoryId]);
+        $insertCategory->execute([':owner' => $id, ':category' => $categoryId]);
     }
 }
 
-// ── Endpunkte: Beitraege ────────────────────────────────────
+// ── Endpunkte: Beitraege und Events ─────────────────────────
+
+/** Meldung, wenn ein Eintrag fehlt – mit dem Wort, das der Redaktor kennt. */
+function notFoundText(string $type): string
+{
+    return $type === 'event' ? 'Event nicht gefunden.' : 'Beitrag nicht gefunden.';
+}
 
 /**
- * GET /api/admin/posts und /api/admin/events – alle Eintraege eines Typs,
- * auch Entwuerfe.
+ * GET /api/admin/posts und /api/admin/events – alle Eintraege, auch
+ * Entwuerfe.
  *
  * Anders als die oeffentliche Liste ohne Blaettern: die Redaktion will die
  * ganze Liste sehen und im Browser suchen und filtern. Events stehen nach
@@ -848,23 +962,25 @@ function writeRelations(PDO $db, int $postId, array $blocks, array $categoryIds)
  */
 function adminListPosts(PDO $db, string $base, string $type): void
 {
-    // Die Sortierung kommt aus zwei festen Zeichenketten, nie aus der Anfrage.
-    $order = $type === 'event' ? 'p.event_date DESC, p.id DESC' : 'p.published_at DESC, p.id DESC';
+    $isEvent = $type === 'event';
+    $t       = CONTENT_TABLES[$type];
 
-    $stmt = $db->prepare(
-        'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.status, p.updated_at,
-                p.event_date, p.event_time, p.location,
+    // Spalten und Sortierung je Typ aus festen Zeichenketten, nie aus der Anfrage.
+    $extra = $isEvent
+        ? 'p.event_date, p.event_start, p.event_end, p.location'
+        : 'p.published_at';
+    $order = $isEvent ? 'p.event_date DESC, p.id DESC' : 'p.published_at DESC, p.id DESC';
+
+    $rows = $db->query(
+        'SELECT p.id, p.slug, p.title, p.excerpt, p.status, p.updated_at, ' . $extra . ',
                 c.id AS category_id, c.name AS category,
                 m.path, m.alt, m.width, m.height,
-                (SELECT COUNT(*) FROM post_sections s WHERE s.post_id = p.id) AS block_count
-           FROM posts p
+                (SELECT COUNT(*) FROM ' . $t['sections'] . ' s WHERE s.' . $t['owner'] . ' = p.id) AS block_count
+           FROM ' . $t['main'] . ' p
            LEFT JOIN categories c ON c.id = p.category_id
            LEFT JOIN media m      ON m.id = p.cover_id
-          WHERE p.type = :type
           ORDER BY ' . $order
-    );
-    $stmt->execute([':type' => $type]);
-    $rows = $stmt->fetchAll();
+    )->fetchAll();
 
     $data = [];
     foreach ($rows as $row) {
@@ -873,10 +989,11 @@ function adminListPosts(PDO $db, string $base, string $type): void
             'slug'       => $row['slug'],
             'title'      => $row['title'],
             'excerpt'    => $row['excerpt'],
-            'date'       => $row['published_at'],
-            'eventDate'  => $row['event_date'],
-            'eventTime'  => $row['event_time'],
-            'location'   => $row['location'],
+            'date'       => $row['published_at'] ?? null,
+            'eventDate'  => $row['event_date'] ?? null,
+            'eventStart' => clockTime($row['event_start'] ?? null),
+            'eventEnd'   => clockTime($row['event_end'] ?? null),
+            'location'   => $row['location'] ?? null,
             'status'     => $row['status'],
             'updatedAt'  => $row['updated_at'],
             'categoryId' => $row['category_id'] === null ? null : (int) $row['category_id'],
@@ -888,42 +1005,34 @@ function adminListPosts(PDO $db, string $base, string $type): void
     send(['data' => $data], 200, 0);
 }
 
-/** Meldung, wenn ein Eintrag fehlt – mit dem Wort, das der Redaktor kennt. */
-function notFoundText(string $type): string
-{
-    return $type === 'event' ? 'Event nicht gefunden.' : 'Beitrag nicht gefunden.';
-}
-
 /**
  * GET /api/admin/posts/{id} – ein Beitrag samt Bloecken, auch als Entwurf.
- * GET /api/admin/events/{id} – dasselbe fuer ein Event.
- *
- * Der Typ gehoert zur Abfrage: unter /events/12 gibt es keinen Beitrag 12.
+ * GET /api/admin/events/{id} – ein Event samt Bloecken.
  */
 function adminShowPost(PDO $db, int $id, string $base, string $type): void
 {
+    $t = CONTENT_TABLES[$type];
+
     $stmt = $db->prepare(
-        'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.author, p.read_minutes,
-                p.event_date, p.event_time, p.location,
-                p.status, p.category_id, p.cover_id, p.updated_at,
-                m.path, m.alt, m.mime, m.width, m.height, m.bytes
-           FROM posts p
+        'SELECT p.*, m.path, m.alt, m.mime, m.width, m.height, m.bytes
+           FROM ' . $t['main'] . ' p
            LEFT JOIN media m ON m.id = p.cover_id
-          WHERE p.id = :id AND p.type = :type
+          WHERE p.id = :id
           LIMIT 1'
     );
-    $stmt->execute([':id' => $id, ':type' => $type]);
+    $stmt->execute([':id' => $id]);
     $post = $stmt->fetch();
     if ($post === false) {
         fail(404, notFoundText($type));
     }
 
-    $stmt = $db->prepare('SELECT category_id FROM post_categories WHERE post_id = :id');
+    $stmt = $db->prepare('SELECT category_id FROM ' . $t['categories'] . ' WHERE ' . $t['owner'] . ' = :id');
     $stmt->execute([':id' => $id]);
     $categoryIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 
     $stmt = $db->prepare(
-        'SELECT id, kind, text, url, data FROM post_sections WHERE post_id = :id ORDER BY position, id'
+        'SELECT id, kind, text, url, data FROM ' . $t['sections'] . '
+          WHERE ' . $t['owner'] . ' = :id ORDER BY position, id'
     );
     $stmt->execute([':id' => $id]);
     $sections = $stmt->fetchAll();
@@ -937,7 +1046,7 @@ function adminShowPost(PDO $db, int $id, string $base, string $type): void
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $stmt         = $db->prepare(
             'SELECT ssi.section_id, m.id, m.path, m.alt, m.mime, m.width, m.height, m.bytes
-               FROM post_section_images ssi
+               FROM ' . $t['images'] . ' ssi
                JOIN media m ON m.id = ssi.media_id
               WHERE ssi.section_id IN (' . $placeholders . ')
               ORDER BY ssi.position'
@@ -949,7 +1058,7 @@ function adminShowPost(PDO $db, int $id, string $base, string $type): void
 
         $stmt = $db->prepare(
             'SELECT sd.section_id, sd.label, m.id, m.path, m.alt, m.mime, m.width, m.height, m.bytes
-               FROM post_section_documents sd
+               FROM ' . $t['documents'] . ' sd
                JOIN media m ON m.id = sd.media_id
               WHERE sd.section_id IN (' . $placeholders . ')
               ORDER BY sd.position, sd.id'
@@ -957,8 +1066,8 @@ function adminShowPost(PDO $db, int $id, string $base, string $type): void
         $stmt->execute($ids);
         foreach ($stmt->fetchAll() as $row) {
             // Die Beschriftung gehoert zum Baustein, die Datei zum Bestand.
-            // Darum beides getrennt: dieselbe Datei kann in einem anderen
-            // Beitrag unter einer anderen Beschriftung stehen.
+            // Darum beides getrennt: dieselbe Datei kann anderswo unter
+            // einer anderen Beschriftung stehen.
             $documents[(int) $row['section_id']][] = [
                 'label' => (string) $row['label'],
                 'file'  => mediaEntry($row, $base),
@@ -982,137 +1091,107 @@ function adminShowPost(PDO $db, int $id, string $base, string $type): void
         ];
     }
 
-    send([
-        'data' => [
-            'id'          => (int) $post['id'],
-            'slug'        => $post['slug'],
-            'title'       => $post['title'],
-            'excerpt'     => $post['excerpt'],
+    $data = [
+        'id'          => (int) $post['id'],
+        'slug'        => $post['slug'],
+        'title'       => $post['title'],
+        'excerpt'     => $post['excerpt'],
+        'status'      => $post['status'],
+        'categoryId'  => $post['category_id'] === null ? null : (int) $post['category_id'],
+        'categoryIds' => $categoryIds,
+        'coverId'     => $post['cover_id'] === null ? null : (int) $post['cover_id'],
+        // Als vollstaendiger Medieneintrag, nicht nur als Bildquelle: der
+        // Editor haelt das Titelbild in derselben Form wie jedes Bild aus
+        // der Auswahl und muss nichts zusammensetzen.
+        'cover'       => $post['cover_id'] === null
+            ? null
+            : mediaEntry(['id' => (int) $post['cover_id']] + $post, $base),
+        'updatedAt'   => $post['updated_at'],
+        'blocks'      => $blocks,
+    ];
+
+    $data += $type === 'event'
+        ? ['eventDate' => $post['event_date']] + eventObject($post)
+        : [
             'date'        => $post['published_at'],
-            'eventDate'   => $post['event_date'],
-            'eventTime'   => $post['event_time'],
-            'location'    => $post['location'],
             'author'      => $post['author'],
             'readMinutes' => $post['read_minutes'] === null ? null : (int) $post['read_minutes'],
-            'status'      => $post['status'],
-            'categoryId'  => $post['category_id'] === null ? null : (int) $post['category_id'],
-            'categoryIds' => $categoryIds,
-            'coverId'     => $post['cover_id'] === null ? null : (int) $post['cover_id'],
-            // Als vollstaendiger Medieneintrag, nicht nur als Bildquelle:
-            // der Editor haelt das Titelbild in derselben Form wie jedes
-            // Bild aus der Auswahl und muss nichts zusammensetzen.
-            'cover'       => $post['cover_id'] === null
-                ? null
-                : mediaEntry(['id' => (int) $post['cover_id']] + $post, $base),
-            'updatedAt'   => $post['updated_at'],
-            'blocks'      => $blocks,
-        ],
-    ], 200, 0);
+        ];
+
+    send(['data' => $data], 200, 0);
 }
 
 /** POST /api/admin/posts und /api/admin/events – neuer Eintrag. */
 function adminCreatePost(PDO $db, string $type): void
 {
     $body        = jsonBody();
-    $fields      = postFields($db, $body, null, $type);
+    $fields      = contentFields($db, $body, null, $type);
     $blocks      = blocksField($db, $body);
     $categoryIds = categoryIdsField($db, $body);
 
-    if ($type === 'event') {
-        requireMapBlock($blocks);
+    // Spaltennamen aus CONTENT_TABLES, also aus dem Code, nie aus der Anfrage.
+    $columns = array_merge(['slug'], CONTENT_TABLES[$type]['columns']);
+    $params  = [];
+    foreach ($columns as $column) {
+        $params[':' . $column] = $fields[$column];
     }
 
     try {
         $db->beginTransaction();
 
-        // Ein Event bringt kein Veroeffentlichungsdatum mit und bekommt den
-        // Tag des Anlegens – die Spalte darf nie leer sein.
         $stmt = $db->prepare(
-            'INSERT INTO posts (type, slug, title, excerpt, published_at, event_date, event_time,
-                                location, author, read_minutes, cover_id, category_id, status)
-             VALUES (:type, :slug, :title, :excerpt, COALESCE(:published_at, CURDATE()),
-                     :event_date, :event_time, :location, :author, :read_minutes,
-                     :cover_id, :category_id, :status)'
+            'INSERT INTO ' . CONTENT_TABLES[$type]['main'] . ' (' . implode(', ', $columns) . ')
+             VALUES (:' . implode(', :', $columns) . ')'
         );
-        $stmt->execute([
-            ':type'         => $type,
-            ':slug'         => $fields['slug'],
-            ':title'        => $fields['title'],
-            ':excerpt'      => $fields['excerpt'],
-            ':published_at' => $fields['published_at'],
-            ':event_date'   => $fields['event_date'],
-            ':event_time'   => $fields['event_time'],
-            ':location'     => $fields['location'],
-            ':author'       => $fields['author'],
-            ':read_minutes' => $fields['read_minutes'],
-            ':cover_id'     => $fields['cover_id'],
-            ':category_id'  => $fields['category_id'],
-            ':status'       => $fields['status'],
-        ]);
-        $postId = (int) $db->lastInsertId();
+        $stmt->execute($params);
+        $id = (int) $db->lastInsertId();
 
-        writeRelations($db, $postId, $blocks, $categoryIds);
+        writeRelations($db, $type, $id, $blocks, $categoryIds);
         $db->commit();
     } catch (Throwable $e) {
-        // Ohne Ruecknahme bliebe ein Beitrag ohne seine Bloecke stehen.
+        // Ohne Ruecknahme bliebe ein Eintrag ohne seine Bloecke stehen.
         if ($db->inTransaction()) {
             $db->rollBack();
         }
         throw $e;
     }
 
-    send(['data' => ['id' => $postId, 'slug' => $fields['slug']]], 201, 0);
+    send(['data' => ['id' => $id, 'slug' => $fields['slug']]], 201, 0);
 }
 
 /** PUT /api/admin/posts/{id} und /api/admin/events/{id} – Eintrag speichern. */
 function adminUpdatePost(PDO $db, int $id, string $type): void
 {
-    $stmt = $db->prepare('SELECT id FROM posts WHERE id = :id AND type = :type LIMIT 1');
-    $stmt->execute([':id' => $id, ':type' => $type]);
+    $table = CONTENT_TABLES[$type]['main'];
+
+    $stmt = $db->prepare('SELECT id FROM ' . $table . ' WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
     if ($stmt->fetchColumn() === false) {
         fail(404, notFoundText($type));
     }
 
     $body        = jsonBody();
-    $fields      = postFields($db, $body, $id, $type);
+    $fields      = contentFields($db, $body, $id, $type);
     $blocks      = blocksField($db, $body);
     $categoryIds = categoryIdsField($db, $body);
 
-    if ($type === 'event') {
-        requireMapBlock($blocks);
+    $columns     = array_merge(['slug'], CONTENT_TABLES[$type]['columns']);
+    $assignments = [];
+    $params      = [':id' => $id];
+    foreach ($columns as $column) {
+        $assignments[]          = $column . ' = :' . $column;
+        $params[':' . $column] = $fields[$column];
     }
 
     try {
         $db->beginTransaction();
 
-        // Ohne mitgeschicktes Datum (Events) bleibt das bisherige stehen.
         $stmt = $db->prepare(
-            'UPDATE posts
-                SET slug = :slug, title = :title, excerpt = :excerpt,
-                    published_at = COALESCE(:published_at, published_at),
-                    event_date = :event_date, event_time = :event_time,
-                    location = :location, author = :author,
-                    read_minutes = :read_minutes, cover_id = :cover_id,
-                    category_id = :category_id, status = :status
-              WHERE id = :id'
+            'UPDATE ' . $table . ' SET ' . implode(', ', $assignments) . ' WHERE id = :id'
         );
-        $stmt->execute([
-            ':slug'         => $fields['slug'],
-            ':title'        => $fields['title'],
-            ':excerpt'      => $fields['excerpt'],
-            ':published_at' => $fields['published_at'],
-            ':event_date'   => $fields['event_date'],
-            ':event_time'   => $fields['event_time'],
-            ':location'     => $fields['location'],
-            ':author'       => $fields['author'],
-            ':read_minutes' => $fields['read_minutes'],
-            ':cover_id'     => $fields['cover_id'],
-            ':category_id'  => $fields['category_id'],
-            ':status'       => $fields['status'],
-            ':id'           => $id,
-        ]);
+        $stmt->execute($params);
 
-        writeRelations($db, $id, $blocks, $categoryIds);
+        writeRelations($db, $type, $id, $blocks, $categoryIds);
         $db->commit();
     } catch (Throwable $e) {
         if ($db->inTransaction()) {
@@ -1125,7 +1204,8 @@ function adminUpdatePost(PDO $db, int $id, string $type): void
 }
 
 /**
- * DELETE /api/admin/posts/{id} – Beitrag entfernen.
+ * DELETE /api/admin/posts/{id} und /api/admin/events/{id} – Eintrag
+ * entfernen.
  *
  * Abschnitte, Bildzuordnungen und Kategorien gehen ueber ON DELETE CASCADE
  * mit. Die Bilder selbst bleiben in media: sie koennen anderswo verwendet
@@ -1133,8 +1213,8 @@ function adminUpdatePost(PDO $db, int $id, string $type): void
  */
 function adminDeletePost(PDO $db, int $id, string $type): void
 {
-    $stmt = $db->prepare('DELETE FROM posts WHERE id = :id AND type = :type');
-    $stmt->execute([':id' => $id, ':type' => $type]);
+    $stmt = $db->prepare('DELETE FROM ' . CONTENT_TABLES[$type]['main'] . ' WHERE id = :id');
+    $stmt->execute([':id' => $id]);
 
     if ($stmt->rowCount() === 0) {
         fail(404, notFoundText($type));
@@ -1451,6 +1531,11 @@ function adminListCategories(PDO $db): void
                    LEFT JOIN post_categories pc ON pc.post_id = p.id
                   WHERE p.category_id = c.id OR pc.category_id = c.id
                 ) AS post_count,
+                (SELECT COUNT(DISTINCT e.id)
+                   FROM events e
+                   LEFT JOIN event_categories ec ON ec.event_id = e.id
+                  WHERE e.category_id = c.id OR ec.category_id = c.id
+                ) AS event_count,
                 (SELECT COUNT(*) FROM albums a WHERE a.category_id = c.id) AS album_count
            FROM categories c
           ORDER BY c.sort, c.name'
@@ -1459,6 +1544,7 @@ function adminListCategories(PDO $db): void
     $data = [];
     foreach ($rows as $row) {
         $posts  = (int) $row['post_count'];
+        $events = (int) $row['event_count'];
         $albums = (int) $row['album_count'];
 
         $data[] = [
@@ -1467,9 +1553,10 @@ function adminListCategories(PDO $db): void
             'name'       => $row['name'],
             'sort'       => (int) $row['sort'],
             'postCount'  => $posts,
+            'eventCount' => $events,
             'albumCount' => $albums,
-            // Fasst beides zusammen: nur eine unbenutzte Kategorie darf weg.
-            'inUse'      => $posts > 0 || $albums > 0,
+            // Fasst alles zusammen: nur eine unbenutzte Kategorie darf weg.
+            'inUse'      => $posts > 0 || $events > 0 || $albums > 0,
         ];
     }
     send(['data' => $data], 200, 0);
@@ -1565,22 +1652,36 @@ function adminDeleteCategory(PDO $db, int $id): void
                        FROM posts p
                        LEFT JOIN post_categories pc ON pc.post_id = p.id
                       WHERE p.category_id = :id OR pc.category_id = :id_extra) AS post_count,
+                    (SELECT COUNT(DISTINCT e.id)
+                       FROM events e
+                       LEFT JOIN event_categories ec ON ec.event_id = e.id
+                      WHERE e.category_id = :id_event OR ec.category_id = :id_event_extra) AS event_count,
                     (SELECT COUNT(*) FROM albums a WHERE a.category_id = :id_album) AS album_count'
         );
-        // Drei Platzhalter fuer denselben Wert: bei echten Prepared Statements
-        // darf ein benannter Platzhalter nur einmal vorkommen.
-        $stmt->execute([':id' => $id, ':id_extra' => $id, ':id_album' => $id]);
+        // Ein Platzhalter je Stelle fuer denselben Wert: bei echten Prepared
+        // Statements darf ein benannter Platzhalter nur einmal vorkommen.
+        $stmt->execute([
+            ':id'             => $id,
+            ':id_extra'       => $id,
+            ':id_event'       => $id,
+            ':id_event_extra' => $id,
+            ':id_album'       => $id,
+        ]);
         $usage = $stmt->fetch();
 
         $posts  = (int) $usage['post_count'];
+        $events = (int) $usage['event_count'];
         $albums = (int) $usage['album_count'];
 
-        if ($posts > 0 || $albums > 0) {
+        if ($posts > 0 || $events > 0 || $albums > 0) {
             $db->rollBack();
 
             $teile = [];
             if ($posts > 0) {
                 $teile[] = $posts === 1 ? '1 Beitrag' : $posts . ' Beiträgen';
+            }
+            if ($events > 0) {
+                $teile[] = $events === 1 ? '1 Event' : $events . ' Events';
             }
             if ($albums > 0) {
                 $teile[] = $albums === 1 ? '1 Album' : $albums . ' Alben';
@@ -1589,7 +1690,7 @@ function adminDeleteCategory(PDO $db, int $id): void
             send([
                 'error'  => 'Diese Kategorie wird von ' . implode(' und ', $teile)
                             . ' verwendet und kann darum nicht gelöscht werden.',
-                'usedBy' => ['Beiträge: ' . $posts, 'Alben: ' . $albums],
+                'usedBy' => ['Beiträge: ' . $posts, 'Events: ' . $events, 'Alben: ' . $albums],
             ], 409, 0);
         }
 
@@ -1674,23 +1775,29 @@ function adminListMedia(PDO $db, string $base): void
 function mediaUsage(PDO $db, int $id): array
 {
     // Jede Zeile: Beschreibung => Abfrage, die die betroffenen Namen liefert.
-    // Beitraege und Events liegen beide in posts, der Redaktor sucht sie aber
-    // an verschiedenen Stellen im CMS. Die Abfragen darauf liefern darum
-    // "Typ|Titel", und die Schleife unten setzt den Typ vor die Beschreibung.
-    $postName = 'CONCAT(IF(p.type = "event", "Event", "Beitrag"), "|", p.title)';
-
     $quellen = [
-        '(Titelbild)'         => 'SELECT ' . $postName . ' FROM posts p WHERE p.cover_id = :id',
-        '(Baustein)'          => 'SELECT DISTINCT ' . $postName . '
+        'Beitrag (Titelbild)' => 'SELECT title FROM posts WHERE cover_id = :id',
+        'Beitrag (Baustein)'  => 'SELECT DISTINCT p.title
                                     FROM post_section_images ssi
                                     JOIN post_sections s ON s.id = ssi.section_id
                                     JOIN posts p         ON p.id = s.post_id
                                    WHERE ssi.media_id = :id',
-        '(Dokument)'          => 'SELECT DISTINCT ' . $postName . '
+        'Beitrag (Dokument)'  => 'SELECT DISTINCT p.title
                                     FROM post_section_documents sd
                                     JOIN post_sections s ON s.id = sd.section_id
                                     JOIN posts p         ON p.id = s.post_id
                                    WHERE sd.media_id = :id',
+        'Event (Titelbild)'   => 'SELECT title FROM events WHERE cover_id = :id',
+        'Event (Baustein)'    => 'SELECT DISTINCT e.title
+                                    FROM event_section_images esi
+                                    JOIN event_sections s ON s.id = esi.section_id
+                                    JOIN events e         ON e.id = s.event_id
+                                   WHERE esi.media_id = :id',
+        'Event (Dokument)'    => 'SELECT DISTINCT e.title
+                                    FROM event_section_documents ed
+                                    JOIN event_sections s ON s.id = ed.section_id
+                                    JOIN events e         ON e.id = s.event_id
+                                   WHERE ed.media_id = :id',
         'Album (Titelbild)'   => 'SELECT title FROM albums WHERE cover_id = :id',
         'Album (Bild)'        => 'SELECT DISTINCT a.title
                                     FROM album_images ai
@@ -1701,6 +1808,7 @@ function mediaUsage(PDO $db, int $id): array
                                     FROM page_documents pd
                                     JOIN pages pg ON pg.id = pd.page_id
                                    WHERE pd.media_id = :id',
+        'Startseite'          => 'SELECT "Titelbild" FROM site_images WHERE media_id = :id',
     ];
 
     $usage = [];
@@ -1708,13 +1816,6 @@ function mediaUsage(PDO $db, int $id): array
         $stmt = $db->prepare($sql);
         $stmt->execute([':id' => $id]);
         foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
-            // "Event|Generalversammlung" wird zu
-            // "Event (Titelbild): «Generalversammlung»".
-            if (str_starts_with($label, '(')) {
-                [$typ, $titel] = explode('|', (string) $name, 2) + [1 => ''];
-                $usage[]       = $typ . ' ' . $label . ': «' . $titel . '»';
-                continue;
-            }
             $usage[] = $label . ': «' . $name . '»';
         }
     }
@@ -1967,6 +2068,54 @@ function adminUploadMedia(PDO $db, array $config, string $base): void
     ], $base)], 201, 0);
 }
 
+// ── Endpunkte: Startseite ───────────────────────────────────
+
+/** GET /api/admin/home – das gewaehlte Titelbild der Startseite. */
+function adminShowHome(PDO $db, string $base): void
+{
+    $stmt = $db->prepare(
+        'SELECT m.id, m.path, m.alt, m.mime, m.width, m.height, m.bytes
+           FROM site_images si
+           JOIN media m ON m.id = si.media_id
+          WHERE si.slot = :slot
+          LIMIT 1'
+    );
+    $stmt->execute([':slot' => HOME_HERO_SLOT]);
+    $row = $stmt->fetch();
+
+    send(['data' => ['heroImage' => $row === false ? null : mediaEntry($row, $base)]], 200, 0);
+}
+
+/**
+ * PUT /api/admin/home – Titelbild der Startseite setzen oder entfernen.
+ *
+ * heroImageId null nimmt das Bild weg; die Startseite zeigt dann wieder die
+ * Platzhalterflaeche. INSERT … ON DUPLICATE KEY UPDATE statt UPDATE: fehlt
+ * die Zeile aus Migration 007, entsteht sie hier neu, statt dass das
+ * Speichern still ins Leere laeuft.
+ */
+function adminUpdateHome(PDO $db, string $base): void
+{
+    $body    = jsonBody();
+    $mediaId = requireRow($db, 'media', idField($body, 'heroImageId'), 'Das gewählte Bild');
+
+    if ($mediaId !== null) {
+        $stmt = $db->prepare('SELECT mime FROM media WHERE id = :id');
+        $stmt->execute([':id' => $mediaId]);
+        if (!str_starts_with((string) $stmt->fetchColumn(), 'image/')) {
+            invalid('Als Titelbild eignet sich nur ein Bild, kein Dokument.');
+        }
+    }
+
+    $stmt = $db->prepare(
+        'INSERT INTO site_images (slot, media_id) VALUES (:slot, :media)
+         ON DUPLICATE KEY UPDATE media_id = VALUES(media_id)'
+    );
+    $stmt->execute([':slot' => HOME_HERO_SLOT, ':media' => $mediaId]);
+
+    adminShowHome($db, $base);
+}
+
 // ── Endpunkte: Zugaenge ─────────────────────────────────────
 
 /** GET /api/admin/users – alle Zugaenge. */
@@ -2159,6 +2308,17 @@ function handleAdmin(PDO $db, array $config, string $method, string $resource, ?
                     ? adminDeleteUser($db, $config, $id, $actor)
                     : methodNotAllowed('DELETE');
             }
+            break;
+
+        case 'home':
+            if ($id !== null) {
+                fail(404, 'Nicht gefunden.');
+            }
+            match ($method) {
+                'GET'   => adminShowHome($db, $base),
+                'PUT'   => adminUpdateHome($db, $base),
+                default => methodNotAllowed('GET, PUT'),
+            };
             break;
 
         case 'media':

@@ -1,0 +1,348 @@
+:host {
+  display: block;
+}
+
+/* ── Abschnitte ───────────────────────────────────────────────── */
+.sections {
+  margin-top: 36px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 44px;
+}
+
+.section-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+/* ── Zwischentitel ────────────────────────────────────────────
+   Gliedert lange Beitraege. Der Abstand nach oben ist groesser als
+   der nach unten, damit der Titel zu dem gehoert, was folgt. */
+.section-heading {
+  margin: 12px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* ── Zitat ──────────────────────────────────────────────────── */
+.section-quote {
+  margin: 0;
+  padding: 4px 0 4px 24px;
+  border-left: 3px solid var(--vlt-primary);
+  font-size: 21px;
+  font-style: italic;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* ── Bildlegende ────────────────────────────────────────────── */
+.section-caption {
+  /* Negativer Abstand nach oben: der Abschnitt setzt 24px zwischen alle
+     Kinder, die Legende gehoert aber eng ans Bild darueber. */
+  margin: -16px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--vlt-muted);
+}
+
+.section-images {
+  display: grid;
+  gap: 20px;
+}
+
+/* Zwei Bilder stehen auf Desktop nebeneinander, auf Mobile untereinander. */
+.section-images.is-pair {
+  grid-template-columns: 1fr 1fr;
+}
+
+.section-img {
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.section-images.is-pair .section-img {
+  border-radius: 14px;
+}
+
+/* ── Tabelle ──────────────────────────────────────────────────
+   Waagrecht scrollbar statt gequetscht: eine Tabelle mit sechs Spalten
+   wird auf dem Telefon sonst unlesbar, und der Textsatz daneben soll
+   seine Breite behalten. */
+.section-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+}
+
+.section-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.section-table th,
+.section-table td {
+  padding: 11px 16px;
+  text-align: left;
+  vertical-align: top;
+  /* Nur waagrechte Linien: senkrechte machen aus einer Tabelle ein
+     Gitter und lassen sie schwerer wirken, als sie ist. */
+  border-bottom: 1px solid var(--vlt-rule);
+}
+
+.section-table thead th {
+  background: var(--vlt-bg);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Die letzte Zeile braucht keinen Strich – dafür ist der Rahmen da. */
+.section-table tbody tr:last-child th,
+.section-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ── Dokumente ────────────────────────────────────────────────── */
+.section-doctitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.section-docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Die Liste gehört eng an ihre Überschrift. Nur dann: ohne Überschrift
+   würde ein negativer Abstand die Liste in den Abschnitt darüber ziehen. */
+.section-doctitle + .section-docs {
+  margin-top: -12px;
+}
+
+.section-doc {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--vlt-text);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.section-doc:hover,
+.section-doc:focus-visible {
+  border-color: var(--vlt-nav);
+  box-shadow: 0 2px 12px rgba(47, 47, 127, 0.1);
+}
+
+.doc-badge {
+  flex-shrink: 0;
+  width: 52px;
+  padding: 7px 0;
+  border-radius: 7px;
+  background: var(--vlt-nav);
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #fff;
+}
+
+.doc-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.doc-size {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--vlt-mono);
+  font-size: 12px;
+  color: var(--vlt-muted);
+}
+
+.doc-arrow {
+  flex-shrink: 0;
+  line-height: 0;
+  color: var(--vlt-muted);
+}
+
+.section-doc:hover .doc-arrow {
+  color: var(--vlt-nav);
+}
+
+/* ── Verweis ──────────────────────────────────────────────────── */
+.section-link {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.section-link a {
+  color: var(--vlt-text);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid var(--vlt-rule);
+  padding-bottom: 3px;
+}
+
+.section-link a:hover {
+  border-bottom-color: var(--vlt-text);
+}
+
+.section-link span {
+  color: var(--vlt-primary);
+}
+
+/* ── Karte ────────────────────────────────────────────────────── */
+.section-map-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  /* Eng an die Karte, wie die Legende ans Bild. */
+  margin-top: -12px;
+}
+
+.section-map-address {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.section-map-links {
+  margin: 0;
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.section-map-links a {
+  color: var(--vlt-text);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid var(--vlt-rule);
+  padding-bottom: 2px;
+}
+
+.section-map-links a:hover {
+  border-bottom-color: var(--vlt-text);
+}
+
+.section-map-links span {
+  color: var(--vlt-primary);
+}
+
+/* Platzhalter, solange im CMS kein Bild hinterlegt ist. */
+.section-img-empty {
+  background: var(--vlt-card);
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(38 38 38 / 0.05) 0 2px,
+    transparent 2px 16px
+  );
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.img-cap {
+  font-family: var(--vlt-mono);
+  font-size: 11px;
+  color: var(--vlt-muted);
+}
+
+/* ── Mobile ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sections {
+    margin-top: 22px;
+  }
+
+  .section {
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .section-text {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .section-images,
+  .section-images.is-pair {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .section-img,
+  .section-images.is-pair .section-img {
+    border-radius: 12px;
+  }
+
+  .section-table {
+    font-size: 14.5px;
+  }
+
+  .section-table th,
+  .section-table td {
+    padding: 9px 12px;
+  }
+
+  .section-doctitle,
+  .section-link {
+    font-size: 16px;
+  }
+
+  .section-doc {
+    gap: 11px;
+    padding: 11px 12px;
+  }
+
+  /* Der Pfeil erklärt nichts, was das Abzeichen nicht schon sagt – auf
+     dem Telefon zählt die Breite mehr. */
+  .doc-arrow {
+    display: none;
+  }
+
+  .doc-badge {
+    width: 44px;
+    padding: 6px 0;
+    font-size: 10px;
+  }
+
+  .doc-label {
+    font-size: 15px;
+  }
+
+  .section-map-foot {
+    margin-top: -6px;
+  }
+}

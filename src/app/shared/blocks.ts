@@ -10,13 +10,13 @@ import { AdminBlock, AdminMedia } from './admin-api';
  * ist die einzige Stelle, die beide Seiten kennt: welche Arten es gibt, was
  * eine Art traegt und wie ein Block zur Speicherform wird.
  *
- * Events (Migration 006) bestehen aus denselben Bausteinen wie Beitraege.
- * Fuer sie ist die Karte Pflicht – das prueft der Editor und, verbindlich,
- * die API.
+ * Events (eigene Tabellen seit Migration 008) bestehen aus denselben
+ * Bausteinen wie Beitraege, ausser der Karte: ihr Ort steht in den
+ * Eckdaten, und die Website fuehrt mit "Route planen" hin.
  *
- * Kommt eine Art dazu, ist hier, in der ENUM-Spalte `post_sections.kind`
- * (Migrationen 003, 005 und 006) und in BLOCK_KINDS in api/admin.php etwas
- * zu tun – sonst nirgends.
+ * Kommt eine Art dazu, ist hier, in den ENUM-Spalten `post_sections.kind`
+ * (Migrationen 003, 005 und 006) und `event_sections.kind` (008) und in
+ * BLOCK_KINDS in api/admin.php etwas zu tun – sonst nirgends.
  */
 
 export type BlockKind =

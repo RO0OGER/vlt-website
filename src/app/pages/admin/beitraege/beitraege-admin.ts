@@ -25,7 +25,7 @@ const WORDING: Record<
     one: 'Event',
     list: 'Events',
     fresh: 'Neues Event',
-    sub: 'Anlässe und Kurse des Verbands – mit Datum, Ort und Karte.',
+    sub: 'Verbandsanlässe mit Datum, Ort, Preisen und Anmeldung.',
     admin: '/admin/events',
     site: '/events',
   },

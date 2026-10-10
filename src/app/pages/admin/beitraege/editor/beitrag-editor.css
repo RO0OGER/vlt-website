@@ -866,20 +866,135 @@ select:focus {
   color: #c0392b;
 }
 
-/* Hinweis über den Bausteinen, solange einem Event die Karte fehlt. */
-.map-missing {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
+/* ── Eckdaten eines Events ────────────────────────────────── */
+.facts {
+  margin-bottom: 22px;
+}
+
+.facts-group {
   margin: 0 0 10px;
-  padding: 10px 12px;
-  border: 1px solid #f0d49b;
-  border-radius: 10px;
-  background: #fff8e8;
+  padding: 14px 16px 6px;
+  border: 1px solid var(--vlt-rule);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.facts-group legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  margin-left: -6px;
   font-size: 13px;
-  color: #7a5200;
+  font-weight: 700;
+  color: var(--vlt-text);
+}
+
+.facts-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--vlt-bg);
+  color: var(--vlt-nav);
+}
+
+.facts-icon-text {
+  font-family: var(--vlt-mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.facts-group > .field-hint {
+  margin: -6px 0 10px;
+}
+
+.facts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.facts-row-3 {
+  grid-template-columns: 1.4fr 1fr 1fr;
+}
+
+.price-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.price-row + .block-actions {
+  margin-bottom: 10px;
+}
+
+/* Ein Schalter statt eines Häkchens: "an/aus" liest sich hier schneller. */
+.switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 4px 0 12px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.switch-track {
+  flex-shrink: 0;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--vlt-rule);
+  transition: background 0.15s;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--vlt-nav);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--vlt-nav);
+  outline-offset: 2px;
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.switch-text span {
+  font-size: 11.5px;
+  color: var(--vlt-muted);
 }
 
 /* ── Karte ────────────────────────────────────────────────── */
@@ -969,6 +1084,12 @@ select:focus {
 }
 
 @media (max-width: 760px) {
+  .facts-row,
+  .facts-row-3 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
   .bar {
     flex-wrap: wrap;
     padding: 10px 16px;

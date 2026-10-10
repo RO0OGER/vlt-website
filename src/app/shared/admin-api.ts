@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { BlockKind, MapLocation, PayloadBlock, TableData } from './blocks';
+import { ApiEventFields, ApiPrice } from './content-api';
 
 /**
  * Zugriff auf die Schreib-API des CMS unter /api/admin/.
@@ -31,9 +32,9 @@ interface Envelope<T> {
 export type MediaKind = 'image' | 'document';
 
 /**
- * Beitrag oder Event. Beide liegen in derselben Tabelle und bestehen aus
- * denselben Bausteinen; die API trennt sie ueber die Adresse
- * (/api/admin/posts und /api/admin/events).
+ * Beitrag oder Event. Zwei getrennte Eintraege mit eigenen Tabellen, deren
+ * Inhalt aus denselben Bausteinen besteht; die API spricht sie ueber
+ * /api/admin/posts und /api/admin/events an.
  */
 export type PostType = 'post' | 'event';
 
@@ -66,7 +67,8 @@ export interface AdminPostRow {
   date: string;
   /** Nur bei Events gesetzt. */
   eventDate: string | null;
-  eventTime: string | null;
+  eventStart: string | null;
+  eventEnd: string | null;
   location: string | null;
   status: 'draft' | 'published';
   updatedAt: string;
@@ -100,21 +102,22 @@ export interface AdminBlock {
   location: MapLocation | null;
 }
 
-/** Ein Beitrag oder Event mit allem, was der Editor braucht. */
-export interface AdminPostDetail {
+/**
+ * Ein Beitrag oder Event mit allem, was der Editor braucht.
+ *
+ * Gemeinsam sind Titel, Anriss, Bild, Kategorien, Status und Bausteine.
+ * Datum, Autor und Lesedauer kommen nur bei Beitraegen, die Angaben eines
+ * Anlasses (ApiEventFields, eventDate) nur bei Events – darum optional.
+ */
+export interface AdminPostDetail extends Partial<ApiEventFields> {
   id: number;
   slug: string;
   title: string;
   excerpt: string;
-  date: string;
-  /** Tag des Events; bei Beitraegen null. */
-  eventDate: string | null;
-  /** Zeit als freier Text, z. B. "17.30 – 21.00 Uhr". */
-  eventTime: string | null;
-  /** Ort in einer Zeile; bei Beitraegen null. */
-  location: string | null;
-  author: string | null;
-  readMinutes: number | null;
+  date?: string;
+  eventDate?: string;
+  author?: string | null;
+  readMinutes?: number | null;
   status: 'draft' | 'published';
   categoryId: number | null;
   categoryIds: number[];
@@ -139,10 +142,22 @@ export interface PostPayload {
   excerpt: string;
   /** Veroeffentlichungsdatum. Bei Events liest die API es nicht. */
   date: string;
-  /** Nur bei Events: Datum (Pflicht), Zeit, Ort (Pflicht). */
+  /**
+   * Nur bei Events, bei Beitraegen liest die API sie nicht. Pflicht sind
+   * Datum und Ort; Zeiten als "HH:MM" oder leer.
+   */
   eventDate: string;
-  eventTime: string;
+  eventStart: string;
+  eventEnd: string;
   location: string;
+  kicker: string;
+  street: string;
+  city: string;
+  prices: ApiPrice[];
+  registrationUrl: string;
+  audience: string;
+  admission: string;
+  membersOnly: boolean;
   author: string;
   readMinutes: number | null;
   status: 'draft' | 'published';
@@ -150,6 +165,11 @@ export interface PostPayload {
   categoryIds: number[];
   coverId: number | null;
   blocks: PayloadBlock[];
+}
+
+/** Titelbild der Startseite, wie das CMS es liest und schreibt. */
+export interface AdminHome {
+  heroImage: AdminMedia | null;
 }
 
 /** Ein Album in der Uebersicht. */
@@ -202,6 +222,8 @@ export interface AdminCategory {
   sort?: number;
   /** Beitraege mit dieser Kategorie – Haupt- und Nebenzuordnung zusammen. */
   postCount?: number;
+  /** Events mit dieser Kategorie – Haupt- und Nebenzuordnung zusammen. */
+  eventCount?: number;
   albumCount?: number;
   /** Wird die Kategorie irgendwo verwendet? Dann bleibt sie. */
   inUse?: boolean;
@@ -276,6 +298,18 @@ export class AdminApi {
 
   remove(id: number, type: PostType = 'post'): Observable<unknown> {
     return this.http.delete(`${RESOURCE[type]}/${id}`, { headers: this.headers() });
+  }
+
+  /** Das Titelbild der Startseite. */
+  home(): Observable<AdminHome> {
+    return this.unwrap<AdminHome>(this.http.get<Envelope<AdminHome>>(`${API}/home`, { headers: this.headers() }));
+  }
+
+  /** Setzt das Titelbild der Startseite; null nimmt es weg. */
+  updateHome(heroImageId: number | null): Observable<AdminHome> {
+    return this.unwrap<AdminHome>(
+      this.http.put<Envelope<AdminHome>>(`${API}/home`, { heroImageId }, { headers: this.headers() }),
+    );
   }
 
   categories(): Observable<AdminCategory[]> {

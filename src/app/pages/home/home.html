@@ -17,10 +17,17 @@
         </a>
       </div>
     </div>
-    <div class="hero-poster" aria-hidden="true">
-      <div class="hero-poster-glow"></div>
-      <div class="hero-poster-caption">[ editorial portrait · drop image ]</div>
-    </div>
+    <!-- Das Titelbild wird im CMS unter "Startseite" gewählt. Bis eines
+         gesetzt ist (oder solange es lädt), steht die gestreifte Fläche. -->
+    @if (heroImage(); as img) {
+      <div class="hero-poster">
+        <img class="hero-poster-img" [src]="img.src" [alt]="img.alt" fetchpriority="high" />
+      </div>
+    } @else {
+      <div class="hero-poster" aria-hidden="true">
+        <div class="hero-poster-glow"></div>
+      </div>
+    }
   </div>
 </section>
 
@@ -88,10 +95,10 @@
     <div class="vlt-container">
       <div class="section-head">
         <div>
-          <p class="vlt-eyebrow">· Kommende Events</p>
-          <h2 id="events-title">Verband Events</h2>
+          <p class="vlt-eyebrow">· Kommende Anlässe</p>
+          <h2 id="events-title">Verbandsanlässe</h2>
         </div>
-        <a routerLink="/events" class="section-link">Alle Events ansehen »</a>
+        <a routerLink="/events" class="section-link">Alle Anlässe ansehen »</a>
       </div>
 
       @if (events().length) {
@@ -125,7 +132,7 @@
         </ul>
       } @else {
         <p class="events-empty">
-          Zurzeit ist kein Event ausgeschrieben. Neue Anlässe erscheinen hier, sobald sie
+          Zurzeit ist kein Anlass ausgeschrieben. Neue Anlässe erscheinen hier, sobald sie
           feststehen.
         </p>
       }

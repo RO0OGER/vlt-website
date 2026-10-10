@@ -148,10 +148,12 @@ export class Kategorien {
   /** "3 Beiträge", "1 Album · 2 Beiträge" – oder der Hinweis, dass sie frei ist. */
   usageLabel(category: AdminCategory): string {
     const posts = category.postCount ?? 0;
+    const events = category.eventCount ?? 0;
     const albums = category.albumCount ?? 0;
 
     const teile: string[] = [];
     if (posts > 0) teile.push(posts === 1 ? '1 Beitrag' : `${posts} Beiträge`);
+    if (events > 0) teile.push(events === 1 ? '1 Event' : `${events} Events`);
     if (albums > 0) teile.push(albums === 1 ? '1 Album' : `${albums} Alben`);
 
     return teile.length ? teile.join(' · ') : 'Wird nirgends verwendet';

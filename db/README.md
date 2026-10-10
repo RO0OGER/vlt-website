@@ -36,6 +36,8 @@ was seither dazugekommen ist, steht als eigene Migration daneben:
 | `004_user_management.sql` | Startpasswort-Zwang für neue Zugänge |
 | `005_post_blocks_tabelle_dokument_link.sql` | Tabelle, Dokumentenliste und Link als Bausteine |
 | `006_events.sql` | Events (Datum, Zeit, Ort) und den Karten-Baustein |
+| `007_startseite_titelbild.sql` | Titelbild der Startseite, im CMS unter «Startseite» austauschbar |
+| `008_events_eigene_tabelle.sql` | Events in eigenen Tabellen (`events`, `event_sections` …), getrennt von den Beiträgen; dazu Untertitel, Beginn/Ende, Adresse, Preise, Anmeldung, Zielgruppe, Zutritt. Übernimmt bestehende Events aus `posts`. |
 
 Jede Datei nennt in ihrem Kopf die `GRANT`-Zeilen, die der Datenbankbenutzer
 zusätzlich braucht. Fehlen sie, lädt die Seite zwar, aber das CMS kann nicht

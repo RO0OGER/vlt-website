@@ -70,6 +70,23 @@ const WORDING: Record<
 };
 
 /**
+ * Eine Preisstufe im Formular. Die uid haelt die Zeile beim Tippen stabil –
+ * ohne sie baute @for die Eingabefelder bei jeder Aenderung neu auf, und der
+ * Cursor sprang heraus.
+ */
+interface PriceRow {
+  uid: number;
+  label: string;
+  value: string;
+}
+
+let nextPriceUid = 1;
+
+function priceRow(label = '', value = ''): PriceRow {
+  return { uid: nextPriceUid++, label, value };
+}
+
+/**
  * Woher ein laufender Zug kommt: aus der Bausteinleiste (ein neuer Block)
  * oder aus dem Beitrag selbst (ein bestehender wird umsortiert).
  */
@@ -103,10 +120,12 @@ type PickerTarget =
  * dem die Haelfte gespeichert ist.
  *
  * Events benutzen denselben Editor (Route-Daten `type: 'event'`). Sie haben
- * dieselben Bausteine, dazu Datum und Ort als Pflichtfelder und eine Karte
- * als Pflichtbaustein. Veroeffentlichungsdatum und Autor fallen weg – bei
- * einem Event zaehlt, wann und wo es stattfindet, nicht wer es eingetragen
- * hat.
+ * dieselben Bausteine ausser der Karte, dazu die Angaben eines
+ * Verbandsanlasses – dieselben wie frueher bei guidle, ohne den Plan: Datum
+ * und Ort (Pflicht), Beginn, Ende, Adresse, Preise, Anmeldung, Zielgruppe,
+ * Zutritt. Sie stehen gesammelt im Feld "Eckdaten" ueber dem Inhalt.
+ * Veroeffentlichungsdatum und Autor fallen weg – bei einem Event zaehlt,
+ * wann und wo es stattfindet, nicht wer es eingetragen hat.
  */
 @Component({
   selector: 'app-beitrag-editor',
@@ -122,11 +141,19 @@ export class BeitragEditor {
   private readonly titleService = inject(Title);
   private readonly geocoder = inject(Geocoder);
 
-  readonly types = BLOCK_TYPES;
-
   /** Beitrag oder Event – steht in den Daten der Route. */
   readonly kind: PostType = this.route.snapshot.data['type'] === 'event' ? 'event' : 'post';
   readonly isEvent = this.kind === 'event';
+
+  /**
+   * Die Bausteinleiste. Events bekommen keine Karte mehr: ihr Ort steht in
+   * den Eckdaten, und "Route planen" fuehrt hin. Eine Karte aus einem
+   * aelteren Event bleibt trotzdem bearbeitbar, bis man sie entfernt.
+   */
+  readonly types = this.isEvent ? BLOCK_TYPES.filter((type) => type.kind !== 'map') : BLOCK_TYPES;
+
+  /** Hoechstzahl der Preisstufen; dieselbe Grenze kennt die API. */
+  readonly maxPrices = 8;
   readonly words = WORDING[this.kind];
 
   readonly zoomMin = MAP_ZOOM_MIN;
@@ -155,12 +182,21 @@ export class BeitragEditor {
   categoryId: number | null = null;
   extraCategoryIds: number[] = [];
 
-  // Nur bei Events. Datum und Ort sind Pflicht, die Zeit nicht: manches
+  // Nur bei Events. Datum und Ort sind Pflicht, die Zeiten nicht: manches
   // Event dauert den ganzen Tag, und eine erfundene Uhrzeit waere schlimmer
   // als keine.
   eventDate = '';
-  eventTime = '';
+  eventStart = '';
+  eventEnd = '';
+  kicker = '';
   location = '';
+  street = '';
+  city = '';
+  registrationUrl = '';
+  audience = '';
+  admission = '';
+  membersOnly = false;
+  readonly prices = signal<PriceRow[]>([]);
 
   /** Die offene Adresssuche eines Karten-Bausteins. */
   readonly geo = signal<GeoSearch | null>(null);
@@ -227,9 +263,6 @@ export class BeitragEditor {
       .filter((entry) => isEmptyBlock(entry.block)),
   );
 
-  /** Hat das Event seine Pflichtkarte? Bei Beitraegen immer ja. */
-  readonly hasMap = computed(() => !this.isEvent || this.blocks().some((block) => block.kind === 'map'));
-
   constructor() {
     const param = this.route.snapshot.paramMap.get('id');
     const id = param !== null && param !== 'neu' && /^\d+$/.test(param) ? Number(param) : null;
@@ -245,9 +278,12 @@ export class BeitragEditor {
       this.titleService.setTitle(`${this.words.fresh} – VLT Admin`);
       this.loading.set(false);
       // Ein leerer Textblock, damit man sofort schreiben kann statt erst
-      // einen Baustein suchen zu muessen. Ein Event bekommt die Karte
-      // gleich dazu – ohne sie laesst es sich ohnehin nicht speichern.
-      this.blocks.set(this.isEvent ? [createBlock('text'), createBlock('map')] : [createBlock('text')]);
+      // einen Baustein suchen zu muessen.
+      this.blocks.set([createBlock('text')]);
+      // Zwei leere Preiszeilen zum Ausfuellen oder Leerlassen – leere
+      // Zeilen werden nicht gespeichert. Die Vorschlaege stehen als
+      // Platzhalter darin (pricePlaceholder).
+      if (this.isEvent) this.prices.set([priceRow(), priceRow()]);
       return;
     }
 
@@ -269,14 +305,23 @@ export class BeitragEditor {
     this.title = post.title;
     this.slug.set(post.slug);
     this.excerpt = post.excerpt;
-    this.date = post.date;
+    this.date = post.date ?? todayIso();
     this.author = post.author ?? '';
-    this.readMinutes = post.readMinutes;
+    this.readMinutes = post.readMinutes ?? null;
     this.categoryId = post.categoryId;
     this.extraCategoryIds = post.categoryIds;
     this.eventDate = post.eventDate ?? '';
-    this.eventTime = post.eventTime ?? '';
+    this.eventStart = post.eventStart ?? '';
+    this.eventEnd = post.eventEnd ?? '';
+    this.kicker = post.kicker ?? '';
     this.location = post.location ?? '';
+    this.street = post.street ?? '';
+    this.city = post.city ?? '';
+    this.registrationUrl = post.registrationUrl ?? '';
+    this.audience = post.audience ?? '';
+    this.admission = post.admission ?? '';
+    this.membersOnly = post.membersOnly ?? false;
+    this.prices.set((post.prices ?? []).map((price) => priceRow(price.label, price.value)));
     this.status.set(post.status);
     this.slugPreview.set(post.slug);
 
@@ -336,6 +381,29 @@ export class BeitragEditor {
 
   hasCategory(id: number): boolean {
     return this.extraCategoryIds.includes(id);
+  }
+
+  // ── Preise ─────────────────────────────────────────────────
+
+  addPrice(): void {
+    if (this.prices().length >= this.maxPrices) return;
+    this.prices.update((list) => [...list, priceRow()]);
+    this.touch();
+  }
+
+  setPrice(uid: number, field: 'label' | 'value', text: string): void {
+    this.prices.update((list) => list.map((row) => (row.uid === uid ? { ...row, [field]: text } : row)));
+    this.touch();
+  }
+
+  /** Vorschlag in der leeren Zeile: die Stufen, die fast jeder Anlass hat. */
+  pricePlaceholder(index: number): string {
+    return ['z. B. Mitglieder', 'z. B. Nichtmitglieder'].at(index) ?? 'Bezeichnung';
+  }
+
+  removePrice(uid: number): void {
+    this.prices.update((list) => list.filter((row) => row.uid !== uid));
+    this.touch();
   }
 
   // ── Bausteine ──────────────────────────────────────────────
@@ -747,8 +815,19 @@ export class BeitragEditor {
       this.error.set('Ein Event braucht einen Ort.');
       return;
     }
-    if (!this.hasMap()) {
-      this.error.set('Ein Event braucht einen Karten-Baustein mit dem Standort.');
+    if (this.isEvent && this.eventEnd !== '' && this.eventStart === '') {
+      this.error.set('Ein Ende ohne Beginn ergibt keinen Sinn. Tragen Sie zuerst den Beginn ein.');
+      return;
+    }
+    if (this.isEvent && this.eventStart !== '' && this.eventEnd !== '' && this.eventEnd <= this.eventStart) {
+      this.error.set('Das Ende muss nach dem Beginn liegen.');
+      return;
+    }
+    const halfPrice = this.prices().findIndex(
+      (row) => (row.label.trim() === '') !== (row.value.trim() === ''),
+    );
+    if (this.isEvent && halfPrice >= 0) {
+      this.error.set(`Preis ${halfPrice + 1} braucht eine Bezeichnung und einen Betrag.`);
       return;
     }
     if (this.emptyBlocks().length > 0) {
@@ -764,8 +843,21 @@ export class BeitragEditor {
       excerpt: this.excerpt.trim(),
       date: this.date,
       eventDate: this.eventDate,
-      eventTime: this.eventTime.trim(),
+      eventStart: this.eventStart,
+      eventEnd: this.eventEnd,
       location: this.location.trim(),
+      kicker: this.kicker.trim(),
+      street: this.street.trim(),
+      city: this.city.trim(),
+      // Ganz leere Zeilen (etwa die vorgeschlagenen, nie ausgefuellten)
+      // fallen weg, statt die API damit zu behelligen.
+      prices: this.prices()
+        .map((row) => ({ label: row.label.trim(), value: row.value.trim() }))
+        .filter((row) => row.label !== '' || row.value !== ''),
+      registrationUrl: this.registrationUrl.trim(),
+      audience: this.audience.trim(),
+      admission: this.admission.trim(),
+      membersOnly: this.membersOnly,
       author: this.author.trim(),
       readMinutes: this.readMinutes,
       status: this.status(),

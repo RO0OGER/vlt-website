@@ -104,17 +104,47 @@ export interface ApiSection {
   location?: ApiLocation | null;
 }
 
+/** Eine Preisstufe eines Events, z. B. "Mitglieder" – "gratis". */
+export interface ApiPrice {
+  label: string;
+  value: string;
+}
+
 /**
- * Beitrag oder Event mit allen Abschnitten. Bei Beitraegen sind die drei
- * Event-Felder null.
+ * Die Angaben eines Verbandsanlasses – dieselben Felder, die er frueher bei
+ * guidle hatte, ohne den Plan. Bei Beitraegen leer.
  */
-export interface ApiPostDetail extends ApiPost {
+export interface ApiEventFields {
+  /** Beginn als "HH:MM". Null: ganztags oder noch offen. */
+  eventStart: string | null;
+  eventEnd: string | null;
+  /** Name des Orts, z. B. "Kantonsschule Zug". */
+  location: string | null;
+  /** Untertitel ueber dem Titel, z. B. "Workshop / Weiterbildung". */
+  kicker: string | null;
+  street: string | null;
+  /** PLZ und Ort, z. B. "6300 Zug". */
+  city: string | null;
+  prices: ApiPrice[];
+  /** Ziel des Anmeldeknopfs. */
+  registrationUrl: string | null;
+  /** Zielgruppe, durch Komma getrennt. */
+  audience: string | null;
+  /** Zutrittskonditionen in einem Satz. */
+  admission: string | null;
+  membersOnly: boolean;
+}
+
+/**
+ * Beitrag oder Event mit allen Abschnitten. Bei Beitraegen sind die
+ * Event-Felder leer. Optional, weil eine Antwort von vor Migration 008 sie
+ * nicht kennt.
+ */
+export interface ApiPostDetail extends ApiPost, Partial<ApiEventFields> {
   author: string | null;
   categories: string[];
   sections: ApiSection[];
   eventDate?: string | null;
-  eventTime?: string | null;
-  location?: string | null;
 }
 
 /** Ein Event in der Uebersicht. */
@@ -125,11 +155,20 @@ export interface ApiEvent {
   excerpt: string;
   /** ISO-Datum (YYYY-MM-DD) des Events. */
   eventDate: string;
-  /** Zeit als freier Text, z. B. "17.30 – 21.00 Uhr". */
-  eventTime: string | null;
+  eventStart: string | null;
+  eventEnd: string | null;
   location: string;
+  kicker: string | null;
+  city: string | null;
+  membersOnly: boolean;
   category: string | null;
   cover: ApiImage | null;
+}
+
+/** Was die Startseite ausser Beitraegen und Events braucht. */
+export interface ApiHome {
+  /** Das grosse Bild neben dem Titel. Null: Platzhalterflaeche. */
+  heroImage: ApiImage | null;
 }
 
 export interface ApiCategory {
@@ -232,6 +271,11 @@ export class ContentApi {
 
   categories(): Observable<ApiCategory[]> {
     return this.unwrap<ApiCategory[]>(`${API}/categories`);
+  }
+
+  /** Titelbild und weitere Angaben der Startseite, im CMS gepflegt. */
+  home(): Observable<ApiHome> {
+    return this.unwrap<ApiHome>(`${API}/home`);
   }
 
   page(slug: string): Observable<ApiPage> {

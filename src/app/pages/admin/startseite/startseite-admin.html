@@ -1,0 +1,77 @@
+<div class="page">
+
+  <header class="page-head">
+    <h1>Startseite</h1>
+    <p class="page-sub">Das grosse Bild neben dem Titel ganz oben auf der Startseite.</p>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="ok" aria-live="polite">{{ notice() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="note" aria-live="polite">Wird geladen …</p>
+  } @else {
+    <section class="panel" aria-labelledby="hero-title">
+      <div class="panel-head">
+        <h2 id="hero-title">Titelbild</h2>
+        <div class="panel-actions">
+          @if (hero()) {
+            <button type="button" class="btn-plain" (click)="remove()" [disabled]="saving()">
+              Entfernen
+            </button>
+          }
+          <button type="button" class="btn-main" (click)="picking.set(true)" [disabled]="saving()">
+            {{ saving() ? 'Wird gespeichert …' : hero() ? 'Bild ersetzen' : 'Bild wählen' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Vorschau im Stil des Kopfbands der Startseite: links der Titel,
+           rechts das Bild im Hochformat – so, wie Besucher es sehen. -->
+      <div class="preview" aria-hidden="true">
+        <div class="preview-copy">
+          <span class="preview-line preview-line-wide"></span>
+          <span class="preview-line"></span>
+          <span class="preview-line preview-line-short"></span>
+          <span class="preview-btns">
+            <span class="preview-btn preview-btn-primary"></span>
+            <span class="preview-btn"></span>
+          </span>
+        </div>
+        <div class="preview-poster" [class.is-empty]="!hero()">
+          @if (hero(); as img) {
+            <img [src]="img.src" alt="" />
+          } @else {
+            <span>Noch kein Bild</span>
+          }
+        </div>
+      </div>
+
+      @if (hero(); as img) {
+        <p class="caption">
+          <strong>Bildbeschreibung:</strong>
+          {{ img.alt || 'keine – bitte beim Hochladen eine angeben, damit die Seite zugänglich bleibt.' }}
+        </p>
+      }
+
+      <ul class="tips">
+        <li>Am besten ein Hochformat (etwa 4 : 5), mindestens 1000 Pixel breit.</li>
+        <li>Querformate gehen auch – sie werden von der Mitte aus zugeschnitten.</li>
+        <li>Die Änderung gilt sofort; die Website zeigt sie spätestens nach einer Minute.</li>
+      </ul>
+    </section>
+  }
+</div>
+
+@if (picking()) {
+  <app-media-picker
+    kind="image"
+    [usedIds]="usedIds()"
+    (chosen)="onChosen($event)"
+    (closed)="picking.set(false)"
+  />
+}

@@ -1,0 +1,202 @@
+@if (loading()) {
+  <section class="page">
+    <div class="vlt-container">
+      <p class="vlt-eyebrow">· Verbandsanlässe</p>
+      <p class="note" aria-live="polite">Anlass wird geladen…</p>
+    </div>
+  </section>
+} @else if (post(); as p) {
+  @if (p.event; as ev) {
+    <article class="page">
+      <div class="vlt-container">
+        <!-- ── Brotkrumen ─────────────────────────────────────── -->
+        <nav class="crumbs" aria-label="Brotkrumen">
+          <a routerLink="/">Startseite</a>
+          <span aria-hidden="true">»</span>
+          <a routerLink="/events">Verbandsanlässe</a>
+          <span aria-hidden="true">»</span>
+          <span class="crumb-current">{{ p.title }}</span>
+        </nav>
+
+        <!-- ── Kopf ───────────────────────────────────────────── -->
+        <header class="head">
+          @if (ev.kicker) {
+            <p class="kicker">{{ ev.kicker }}</p>
+          }
+          <h1>{{ p.title }}</h1>
+          <p class="when-where">
+            <time [attr.datetime]="ev.date">{{ ev.dateLabel }}</time>
+            @if (ev.time) {
+              <span aria-hidden="true"> · </span>{{ ev.time }}
+            }
+            <span aria-hidden="true"> · </span>{{ ev.location }}@if (ev.city) {<span>, {{ ev.city }}</span>}
+          </p>
+          @if (ev.membersOnly || isPast()) {
+            <p class="flags">
+              @if (isPast()) {
+                <span class="flag flag-past">Hat bereits stattgefunden</span>
+              }
+              @if (ev.membersOnly) {
+                <span class="flag">Nur für Mitglieder</span>
+              }
+            </p>
+          }
+        </header>
+
+        @if (p.cover.src) {
+          <img class="hero" [src]="p.cover.src" [alt]="p.cover.alt" />
+        }
+
+        <div class="grid">
+          <!-- ── Eckdaten ─────────────────────────────────────────
+               Im Quelltext vor dem Inhalt: auf dem Telefon stehen sie
+               so zuoberst, auf dem Desktop rückt sie das Raster nach
+               rechts. -->
+          <aside class="aside" aria-label="Eckdaten">
+            <section class="card">
+              <h2 class="card-title">Datum</h2>
+              <p class="card-big"><time [attr.datetime]="ev.date">{{ ev.dateLabel }}</time></p>
+              <p class="card-line">{{ ev.time || 'Ganztägig' }}</p>
+              @if (!isPast()) {
+                <button type="button" class="card-btn" (click)="addToCalendar()">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                    <line x1="12" y1="14" x2="12" y2="18" /><line x1="10" y1="16" x2="14" y2="16" />
+                  </svg>
+                  In den Kalender eintragen
+                </button>
+              }
+            </section>
+
+            @if (ev.prices.length) {
+              <section class="card">
+                <h2 class="card-title">Preis</h2>
+                <dl class="prices">
+                  @for (price of ev.prices; track $index) {
+                    <div class="price">
+                      <dt>{{ price.label }}</dt>
+                      <dd>{{ price.value }}</dd>
+                    </div>
+                  }
+                </dl>
+              </section>
+            }
+
+            <section class="card">
+              <h2 class="card-title">Ort</h2>
+              <address class="address">
+                <strong>{{ ev.location }}</strong>
+                @if (ev.street) {
+                  <span>{{ ev.street }}</span>
+                }
+                @if (ev.city) {
+                  <span>{{ ev.city }}</span>
+                }
+              </address>
+              <p class="card-links">
+                <a [href]="ev.routeHref" target="_blank" rel="noopener">
+                  Route planen <span aria-hidden="true">»</span>
+                </a>
+                <a routerLink="/kontakt">
+                  Frage zum Anlass <span aria-hidden="true">»</span>
+                </a>
+              </p>
+            </section>
+
+            @if (ev.registrationUrl && !isPast()) {
+              <a
+                class="btn btn-primary btn-lg register"
+                [href]="ev.registrationUrl"
+                [attr.target]="ev.registrationExternal ? '_blank' : null"
+                [attr.rel]="ev.registrationExternal ? 'noopener' : null"
+              >
+                Jetzt anmelden <span aria-hidden="true">»</span>
+              </a>
+            }
+          </aside>
+
+          <!-- ── Inhalt ─────────────────────────────────────────── -->
+          <div class="main">
+            @if (p.excerpt) {
+              <p class="lead">{{ p.excerpt }}</p>
+            }
+
+            <app-post-sections [sections]="sections()" />
+
+            @if (hasFacts()) {
+              <section class="facts-block">
+                <h2 class="block-title">Einordnung</h2>
+                <dl class="facts">
+                  @if (p.categories.length) {
+                    <div class="fact">
+                      <dt>Kategorien</dt>
+                      <dd>
+                        <ul class="chips">
+                          @for (c of p.categories; track c) {
+                            <li class="chip">{{ c }}</li>
+                          }
+                        </ul>
+                      </dd>
+                    </div>
+                  }
+                  @if (ev.audience.length) {
+                    <div class="fact">
+                      <dt>Zielgruppe</dt>
+                      <dd>
+                        <ul class="chips">
+                          @for (group of ev.audience; track group) {
+                            <li class="chip chip-plain">{{ group }}</li>
+                          }
+                        </ul>
+                      </dd>
+                    </div>
+                  }
+                  @if (ev.admission) {
+                    <div class="fact">
+                      <dt>Zutritt</dt>
+                      <dd class="fact-text">{{ ev.admission }}</dd>
+                    </div>
+                  }
+                </dl>
+              </section>
+            }
+
+            @if (ev.registrationUrl && !isPast()) {
+              <!-- Am Ende des Texts noch einmal: wer bis hier gelesen hat,
+                   will sich meist anmelden und soll nicht zurückscrollen. -->
+              <div class="register-end">
+                <a
+                  class="btn btn-primary btn-lg"
+                  [href]="ev.registrationUrl"
+                  [attr.target]="ev.registrationExternal ? '_blank' : null"
+                  [attr.rel]="ev.registrationExternal ? 'noopener' : null"
+                >
+                  Jetzt anmelden <span aria-hidden="true">»</span>
+                </a>
+              </div>
+            }
+
+            <div class="foot">
+              <a routerLink="/events" class="foot-link">
+                Alle Verbandsanlässe ansehen <span aria-hidden="true">»</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  }
+} @else {
+  <section class="page">
+    <div class="vlt-container">
+      <p class="vlt-eyebrow">· Verbandsanlässe</p>
+      <h1>Anlass nicht gefunden</h1>
+      <p class="note">
+        Dieser Anlass existiert nicht oder ist nicht mehr aufgeschaltet.
+      </p>
+      <p><a routerLink="/events" class="btn btn-primary btn-lg">Alle Verbandsanlässe »</a></p>
+    </div>
+  </section>
+}

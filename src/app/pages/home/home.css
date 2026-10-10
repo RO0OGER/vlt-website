@@ -96,14 +96,14 @@
   );
 }
 
-.hero-poster-caption {
+/* Füllt die Fläche ganz; was nicht ins Hochformat passt, wird von der
+   Mitte aus beschnitten. Querformate funktionieren so ebenfalls. */
+.hero-poster-img {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
-  font-family: var(--vlt-mono);
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 0.02em;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ── Beiträge ─────────────────────────────────────────────────── */

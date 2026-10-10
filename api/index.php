@@ -97,6 +97,45 @@ try {
 // ── Hilfsfunktionen ─────────────────────────────────────────
 
 /**
+ * Die Tabellen je Typ (Migration 008). Beitraege und Events sind getrennte
+ * Eintraege mit eigenen Tabellen; gemeinsam ist nur, wie ihr Inhalt aus
+ * Bausteinen besteht. Darum dieselben Funktionen, aber je eigene Tabellen.
+ *
+ * Alle Namen hier sind feste Zeichenketten im Code. Sie werden in SQL
+ * eingesetzt und duerfen darum nie aus einer Anfrage stammen.
+ *
+ * 'columns' sind die Spalten, die beim Speichern geschrieben werden –
+ * ausser slug, das aus dem Titel entsteht.
+ */
+const CONTENT_TABLES = [
+    'post'  => [
+        'main'       => 'posts',
+        'sections'   => 'post_sections',
+        'images'     => 'post_section_images',
+        'documents'  => 'post_section_documents',
+        'categories' => 'post_categories',
+        'owner'      => 'post_id',
+        'columns'    => [
+            'title', 'excerpt', 'published_at', 'author', 'read_minutes',
+            'cover_id', 'category_id', 'status',
+        ],
+    ],
+    'event' => [
+        'main'       => 'events',
+        'sections'   => 'event_sections',
+        'images'     => 'event_section_images',
+        'documents'  => 'event_section_documents',
+        'categories' => 'event_categories',
+        'owner'      => 'event_id',
+        'columns'    => [
+            'title', 'kicker', 'excerpt', 'event_date', 'event_start', 'event_end',
+            'location', 'street', 'city', 'prices', 'registration_url', 'audience',
+            'admission', 'members_only', 'cover_id', 'category_id', 'status',
+        ],
+    ],
+];
+
+/**
  * Baut aus einer media-Zeile das Bildobjekt, das das Frontend erwartet.
  * Fehlt das Bild, kommt null zurueck – die Komponenten zeigen dann ihre
  * Platzhalterflaeche.
@@ -199,6 +238,60 @@ function locationObject(?string $json): ?array
     return ['lat' => $lat, 'lng' => $lng, 'zoom' => max(3, min(19, $zoom))];
 }
 
+/** Uhrzeit aus einer TIME-Spalte ("17:30:00") in der Form HH:MM, sonst null. */
+function clockTime(?string $time): ?string
+{
+    return $time === null || $time === '' ? null : substr($time, 0, 5);
+}
+
+/**
+ * Liest die Preisstufen eines Events aus posts.prices.
+ *
+ * Misstrauisch wie tableObject(): was nicht aus Bezeichnung und Betrag
+ * besteht, faellt weg, statt die Seite zu stoeren.
+ *
+ * @return array<int, array{label: string, value: string}>
+ */
+function pricesObject(?string $json): array
+{
+    $data = $json === null || $json === '' ? null : json_decode($json, true);
+    if (!is_array($data)) {
+        return [];
+    }
+
+    $prices = [];
+    foreach ($data as $entry) {
+        if (is_array($entry) && is_string($entry['label'] ?? null) && is_string($entry['value'] ?? null)) {
+            $prices[] = ['label' => $entry['label'], 'value' => $entry['value']];
+        }
+    }
+    return $prices;
+}
+
+/**
+ * Die Angaben eines Events (Migration 006 und 008) in der Form, die
+ * Frontend und CMS gleichermassen lesen. Bei Beitraegen ist alles leer.
+ *
+ * Der Plan (eine Karte) gehoert nicht mehr dazu: wer hinfahren will, bekommt
+ * die Adresse und den Link "Route planen".
+ */
+function eventObject(array $row): array
+{
+    return [
+        'eventStart'      => clockTime($row['event_start'] ?? null),
+        'eventEnd'        => clockTime($row['event_end'] ?? null),
+        'location'        => $row['location'] ?? null,
+        'kicker'          => $row['kicker'] ?? null,
+        'street'          => $row['street'] ?? null,
+        'city'            => $row['city'] ?? null,
+        'prices'          => pricesObject($row['prices'] ?? null),
+        'registrationUrl' => $row['registration_url'] ?? null,
+        'audience'        => $row['audience'] ?? null,
+        'admission'       => $row['admission'] ?? null,
+        'membersOnly'     => (bool) ($row['members_only'] ?? false),
+    ];
+}
+
 /** Liest einen Ganzzahl-Parameter mit Unter- und Obergrenze. */
 function intParam(string $name, int $default, int $min, int $max): int
 {
@@ -233,7 +326,7 @@ function listCategories(PDO $db): void
                 (SELECT COUNT(DISTINCT p.id)
                    FROM posts p
                    LEFT JOIN post_categories pc ON pc.post_id = p.id
-                  WHERE p.status = "published" AND p.type = "post"
+                  WHERE p.status = "published"
                     AND (p.category_id = c.id OR pc.category_id = c.id)
                 ) AS post_count
            FROM categories c
@@ -292,10 +385,9 @@ function listPosts(PDO $db, string $base): void
     }
 
     // Gesamtzahl zuerst – das Frontend braucht sie fuer die Blaetterleiste.
-    // Events liegen in derselben Tabelle, gehoeren aber nicht in diese Liste.
     $countSql = 'SELECT COUNT(*) FROM posts p
                    LEFT JOIN categories c ON c.id = p.category_id
-                  WHERE p.status = "published" AND p.type = "post"' . $filter;
+                  WHERE p.status = "published"' . $filter;
     $stmt = $db->prepare($countSql);
     $stmt->execute($params);
     $total = (int) $stmt->fetchColumn();
@@ -306,7 +398,7 @@ function listPosts(PDO $db, string $base): void
               FROM posts p
               LEFT JOIN categories c ON c.id = p.category_id
               LEFT JOIN media m      ON m.id = p.cover_id
-             WHERE p.status = "published" AND p.type = "post"' . $filter . '
+             WHERE p.status = "published"' . $filter . '
              ORDER BY p.published_at DESC, p.id DESC
              LIMIT :limit OFFSET :offset';
 
@@ -381,25 +473,27 @@ function listPosts(PDO $db, string $base): void
 
 /**
  * GET /api/posts/{slug} – ein Beitrag mit Abschnitten und Bildern.
- * GET /api/events/{slug} – ein Event, gleich aufgebaut, dazu Datum und Ort.
+ * GET /api/events/{slug} – ein Event, gleich aufgebaut, mit seinen Angaben.
  *
- * Der Typ gehoert zur Abfrage: unter /beitraege/… soll kein Event
- * auftauchen und umgekehrt, auch wenn beide in derselben Tabelle liegen.
+ * Beide aus ihren eigenen Tabellen (CONTENT_TABLES); nur der Aufbau aus
+ * Bausteinen ist derselbe.
  */
 function showPost(PDO $db, string $slug, string $base, string $type = 'post'): void
 {
+    // Tabellennamen aus CONTENT_TABLES – feste Zeichenketten, nie aus der Anfrage.
+    $t = CONTENT_TABLES[$type];
+
     $stmt = $db->prepare(
-        'SELECT p.id, p.slug, p.title, p.excerpt, p.published_at, p.author, p.read_minutes,
-                p.event_date, p.event_time, p.location,
+        'SELECT p.*,
                 c.name AS category, c.slug AS category_slug,
                 m.path, m.alt, m.width, m.height
-           FROM posts p
+           FROM ' . $t['main'] . ' p
            LEFT JOIN categories c ON c.id = p.category_id
            LEFT JOIN media m      ON m.id = p.cover_id
-          WHERE p.slug = :slug AND p.status = "published" AND p.type = :type
+          WHERE p.slug = :slug AND p.status = "published"
           LIMIT 1'
     );
-    $stmt->execute([':slug' => $slug, ':type' => $type]);
+    $stmt->execute([':slug' => $slug]);
     $post = $stmt->fetch();
     if ($post === false) {
         fail(404, $type === 'event' ? 'Event nicht gefunden.' : 'Beitrag nicht gefunden.');
@@ -408,9 +502,9 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
 
     // Weitere Kategorien neben der Hauptkategorie.
     $stmt = $db->prepare(
-        'SELECT c.name FROM post_categories pc
+        'SELECT c.name FROM ' . $t['categories'] . ' pc
            JOIN categories c ON c.id = pc.category_id
-          WHERE pc.post_id = :id
+          WHERE pc.' . $t['owner'] . ' = :id
           ORDER BY c.sort, c.name'
     );
     $stmt->execute([':id' => $postId]);
@@ -419,7 +513,8 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
     // Abschnitte, ihre Bilder und ihre Dokumente in drei Abfragen statt in
     // zwei pro Abschnitt.
     $stmt = $db->prepare(
-        'SELECT id, kind, text, url, data FROM post_sections WHERE post_id = :id ORDER BY position, id'
+        'SELECT id, kind, text, url, data FROM ' . $t['sections'] . '
+          WHERE ' . $t['owner'] . ' = :id ORDER BY position, id'
     );
     $stmt->execute([':id' => $postId]);
     $sections = $stmt->fetchAll();
@@ -431,7 +526,7 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $stmt         = $db->prepare(
             'SELECT ssi.section_id, m.path, m.alt, m.width, m.height
-               FROM post_section_images ssi
+               FROM ' . $t['images'] . ' ssi
                JOIN media m ON m.id = ssi.media_id
               WHERE ssi.section_id IN (' . $placeholders . ')
               ORDER BY ssi.position'
@@ -443,7 +538,7 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
 
         $stmt = $db->prepare(
             'SELECT sd.section_id, sd.label, m.path, m.mime, m.bytes
-               FROM post_section_documents sd
+               FROM ' . $t['documents'] . ' sd
                JOIN media m ON m.id = sd.media_id
               WHERE sd.section_id IN (' . $placeholders . ')
               ORDER BY sd.position, sd.id'
@@ -481,19 +576,18 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
             'slug'         => $post['slug'],
             'title'        => $post['title'],
             'excerpt'      => $post['excerpt'],
-            'date'         => $post['published_at'],
-            // Bei Beitraegen leer, bei Events gesetzt.
-            'eventDate'    => $post['event_date'],
-            'eventTime'    => $post['event_time'],
-            'location'     => $post['location'],
-            'author'       => $post['author'],
+            // Bei Events leer – sie haben statt Datum und Autor ihre eigenen
+            // Angaben, siehe eventObject() unten. Umgekehrt bei Beitraegen.
+            'date'         => $post['published_at'] ?? null,
+            'eventDate'    => $post['event_date'] ?? null,
+            'author'       => $post['author'] ?? null,
             'category'     => $post['category'],
             'categorySlug' => $post['category_slug'],
             'categories'   => $categories,
-            'readMinutes'  => $post['read_minutes'] === null ? null : (int) $post['read_minutes'],
+            'readMinutes'  => isset($post['read_minutes']) ? (int) $post['read_minutes'] : null,
             'cover'        => mediaObject($post, $base),
             'sections'     => $sectionData,
-        ],
+        ] + eventObject($post),
     ]);
 }
 
@@ -508,31 +602,70 @@ function showPost(PDO $db, string $slug, string $base, string $type = 'post'): v
 function listEvents(PDO $db, string $base): void
 {
     $rows = $db->query(
-        'SELECT p.id, p.slug, p.title, p.excerpt, p.event_date, p.event_time, p.location,
+        'SELECT p.id, p.slug, p.title, p.excerpt, p.event_date, p.event_start, p.event_end,
+                p.location, p.kicker, p.city, p.members_only,
                 c.name AS category,
                 m.path, m.alt, m.width, m.height
-           FROM posts p
+           FROM events p
            LEFT JOIN categories c ON c.id = p.category_id
            LEFT JOIN media m      ON m.id = p.cover_id
-          WHERE p.status = "published" AND p.type = "event"
+          WHERE p.status = "published"
           ORDER BY p.event_date, p.id'
     )->fetchAll();
 
     $data = [];
     foreach ($rows as $row) {
         $data[] = [
-            'id'        => (int) $row['id'],
-            'slug'      => $row['slug'],
-            'title'     => $row['title'],
-            'excerpt'   => $row['excerpt'],
-            'eventDate' => $row['event_date'],
-            'eventTime' => $row['event_time'],
-            'location'  => $row['location'],
-            'category'  => $row['category'],
-            'cover'     => mediaObject($row, $base),
+            'id'          => (int) $row['id'],
+            'slug'        => $row['slug'],
+            'title'       => $row['title'],
+            'excerpt'     => $row['excerpt'],
+            'eventDate'   => $row['event_date'],
+            'eventStart'  => clockTime($row['event_start']),
+            'eventEnd'    => clockTime($row['event_end']),
+            'location'    => $row['location'],
+            'kicker'      => $row['kicker'],
+            'city'        => $row['city'],
+            'membersOnly' => (bool) $row['members_only'],
+            'category'    => $row['category'],
+            'cover'       => mediaObject($row, $base),
         ];
     }
     send(['data' => $data]);
+}
+
+/**
+ * Bildplatz der Startseite, wie ihn site_images fuehrt (Migration 007).
+ * Fest im Code: der Name kommt nie aus einer Anfrage.
+ */
+const HOME_HERO_SLOT = 'home_hero';
+
+/**
+ * GET /api/home – was die Startseite ausser Beitraegen und Events braucht.
+ *
+ * Heute nur das Titelbild. Fehlt es (oder die Tabelle, solange Migration 007
+ * nicht eingespielt ist), kommt null, und die Startseite zeigt ihre
+ * Platzhalterflaeche – sie soll an einem Bild nie scheitern.
+ */
+function showHome(PDO $db, string $base): void
+{
+    $hero = null;
+    try {
+        $stmt = $db->prepare(
+            'SELECT m.path, m.alt, m.width, m.height
+               FROM site_images si
+               JOIN media m ON m.id = si.media_id
+              WHERE si.slot = :slot
+              LIMIT 1'
+        );
+        $stmt->execute([':slot' => HOME_HERO_SLOT]);
+        $row  = $stmt->fetch();
+        $hero = $row === false ? null : mediaObject($row, $base);
+    } catch (PDOException $e) {
+        error_log('[api] Titelbild der Startseite: ' . $e->getMessage());
+    }
+
+    send(['data' => ['heroImage' => $hero]]);
 }
 
 /** GET /api/pages/{slug} – eine statische Seite samt verlinkter Dokumente. */
@@ -1077,6 +1210,12 @@ try {
         case 'links':
             listLinks($db);
             break;
+        case 'home':
+            if ($item !== null) {
+                fail(404, 'Nicht gefunden.');
+            }
+            showHome($db, $base);
+            break;
         case '':
             // Kleine Selbstauskunft, damit man beim Aufruf von /api/ sieht,
             // dass die Schnittstelle laeuft.
@@ -1087,7 +1226,7 @@ try {
                         '/api/posts', '/api/posts/{slug}', '/api/events', '/api/events/{slug}',
                         '/api/categories',
                         '/api/pages/{slug}', '/api/albums', '/api/albums/{slug}',
-                        '/api/board', '/api/links',
+                        '/api/board', '/api/links', '/api/home',
                     ],
                 ],
             ]);

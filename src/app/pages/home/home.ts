@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { ContentApi } from '../../shared/content-api';
+import { ApiImage, ContentApi } from '../../shared/content-api';
 import { todayIso } from '../../shared/dates';
 import { EventCard, PostCard, toEventCard, toPostCard } from '../../shared/post-view';
 import { PUBLISHERS } from '../../shared/publishers';
@@ -22,7 +22,16 @@ export class Home {
   readonly posts = signal<PostCard[]>([]);
   readonly loading = signal(true);
 
+  /** Das Titelbild aus dem CMS. Null: die Platzhalterflaeche bleibt. */
+  readonly heroImage = signal<ApiImage | null>(null);
+
   constructor() {
+    this.api.home().subscribe({
+      next: (home) => this.heroImage.set(home.heroImage),
+      // Ohne Bild bleibt die Flaeche – kein Grund fuer eine Meldung.
+      error: () => this.heroImage.set(null),
+    });
+
     this.api.posts({ perPage: 6 }).subscribe({
       next: (res) => {
         this.posts.set(res.items.map(toPostCard));

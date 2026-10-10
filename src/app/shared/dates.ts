@@ -30,6 +30,17 @@ export function formatDateWithWeekday(iso: string): string {
   return `${WEEKDAYS_DE[d.getDay()]}, ${formatDateLong(iso)}`;
 }
 
+/**
+ * Beginn und Ende eines Events, wie man sie hier schreibt:
+ * "17.30 – 21.00 Uhr", nur "17.30 Uhr" ohne Ende, und leer ohne Beginn
+ * (ganztags oder noch offen). Die API liefert "HH:MM".
+ */
+export function formatTimeRange(start: string | null | undefined, end: string | null | undefined): string {
+  if (!start) return '';
+  const clock = (time: string) => time.replace(':', '.');
+  return end ? `${clock(start)} – ${clock(end)} Uhr` : `${clock(start)} Uhr`;
+}
+
 /** Heutiges Datum als JJJJ-MM-TT, nach der Uhr des Besuchers. */
 export function todayIso(): string {
   const now = new Date();

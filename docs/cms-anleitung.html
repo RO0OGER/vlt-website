@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8" />
+<title>CMS-Anleitung – Verband Lehrende Technologie</title>
+<style>
+  @page { size: A4; margin: 15mm 16mm 16mm; }
+  :root {
+    --nav: #2f2f7f; --primary: #f2aa2a; --text: #262626; --muted: #6b6b66;
+    --rule: #dcdcd6; --bg: #f7f7f5; --red: #e02424;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); font-size: 10.3pt; line-height: 1.45; margin: 0; }
+  h2 { font-size: 18pt; margin: 0 0 3pt; color: var(--nav); line-height: 1.15; }
+  h3 { font-size: 11.5pt; margin: 10pt 0 4pt; }
+  p { margin: 0 0 6pt; }
+  .eyebrow { font-family: Consolas, monospace; font-size: 8pt; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 2pt; }
+  .page { break-before: page; }
+  .lead { color: var(--muted); margin-bottom: 9pt; }
+
+  /* Titelblatt */
+  .cover { height: 263mm; display: flex; flex-direction: column; justify-content: space-between; background: var(--nav); color: #fff; margin: -15mm -16mm 0; padding: 28mm 22mm 20mm; }
+  .cover h1 { font-size: 34pt; margin: 8pt 0 10pt; font-weight: 600; line-height: 1.1; }
+  .cover p { color: rgba(255,255,255,.82); font-size: 12pt; max-width: 125mm; }
+  .cover .eyebrow { color: var(--primary); }
+  .cover .bar { width: 22mm; height: 3pt; background: var(--primary); margin: 14pt 0; }
+  .cover-shot { width: 100%; border-radius: 8pt; box-shadow: 0 10pt 30pt rgba(0,0,0,.35); margin: 6mm 0; }
+  .toc { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 12mm; }
+  .toc li { padding: 4pt 0; border-top: 1px solid rgba(255,255,255,.2); break-inside: avoid; }
+  .toc b { color: var(--primary); font-family: Consolas, monospace; margin-right: 6pt; }
+
+  /* Screenshot mit Legende */
+  figure { margin: 6pt 0 8pt; break-inside: avoid; }
+  figure img { display: block; width: 100%; border: 1px solid var(--rule); border-radius: 6pt; box-shadow: 0 3pt 10pt rgba(0,0,0,.08); }
+  figure.half img { width: 78%; margin: 0 auto; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; text-align: center; }
+  ol.legend { list-style: none; padding: 0; margin: 4pt 0 8pt; display: grid; grid-template-columns: 1fr 1fr; gap: 4pt 14pt; break-inside: avoid; }
+  ol.legend.one { grid-template-columns: 1fr; }
+  ol.legend li { position: relative; padding-left: 24pt; min-height: 17pt; }
+  ol.legend li .n { position: absolute; left: 0; top: 0; width: 17pt; height: 17pt; border-radius: 50%; background: var(--red); color: #fff; font-weight: 700; font-size: 9pt; display: flex; align-items: center; justify-content: center; }
+  ol.legend li b { display: block; }
+
+  .ui { display: inline-block; padding: 0 5pt; border: 1px solid var(--rule); border-radius: 4pt; background: #fff; font-weight: 600; font-size: 9.3pt; white-space: nowrap; }
+  .ui.main { background: var(--nav); border-color: var(--nav); color: #fff; }
+  code { font-family: Consolas, monospace; font-size: 9.3pt; background: var(--bg); padding: 0 3pt; border-radius: 3pt; }
+
+  /* Hinweisboxen */
+  .box { border: 2px solid var(--red); border-radius: 7pt; padding: 7pt 10pt 7pt 36pt; margin: 7pt 0 9pt; background: #fff4f4; position: relative; break-inside: avoid; }
+  .box::before { content: '!'; position: absolute; left: 10pt; top: 7pt; width: 17pt; height: 17pt; border-radius: 50%; background: var(--red); color: #fff; font-weight: 800; font-size: 11pt; display: flex; align-items: center; justify-content: center; }
+  .box > b:first-child { display: block; color: var(--red); margin-bottom: 1pt; }
+  .box p:last-child { margin-bottom: 0; }
+  .box.tip { border-color: var(--nav); background: #f3f3fb; }
+  .box.tip::before { content: 'i'; background: var(--nav); font-family: Georgia, serif; }
+  .box.tip > b:first-child { color: var(--nav); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; align-items: start; }
+  table { width: 100%; border-collapse: collapse; margin: 5pt 0 8pt; font-size: 9.6pt; break-inside: avoid; }
+  th, td { text-align: left; vertical-align: top; padding: 4pt 7pt; border-bottom: 1px solid var(--rule); }
+  th { background: var(--bg); }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .flow { display: flex; align-items: center; gap: 4pt; margin: 6pt 0 10pt; font-size: 9.5pt; flex-wrap: wrap; }
+  .flow span.step { background: var(--nav); color: #fff; border-radius: 5pt; padding: 3pt 8pt; font-weight: 600; }
+  .flow span.arrow { color: var(--red); font-weight: 800; }
+</style>
+</head>
+<body>
+
+<!-- ── Titelblatt ─────────────────────────────────────────── -->
+<div class="cover">
+  <div>
+    <p class="eyebrow">Hands-on · Redaktion</p>
+    <h1>Das CMS der Verbands&shy;website</h1>
+    <div class="bar"></div>
+    <p>Schritt für Schritt mit Bildern: anmelden, News schreiben, Verbandsanlässe ausschreiben, Bilder und Galerien pflegen.</p>
+    <img class="cover-shot" src="cms-anleitung-bilder/02-dashboard.png" alt="" />
+  </div>
+  <ul class="toc">
+    <li><b>01</b>Anmelden und Überblick</li>
+    <li><b>02</b>Titelbild der Startseite</li>
+    <li><b>03</b>News (Beiträge) schreiben</li>
+    <li><b>04</b>Die Bausteine</li>
+    <li><b>05</b>Verbandsanlass ausschreiben</li>
+    <li><b>06</b>Bildergalerien</li>
+    <li><b>07</b>Bilder und Dokumente</li>
+    <li><b>08</b>Kategorien und Zugänge</li>
+    <li><b>09</b>Häufige Fragen</li>
+  </ul>
+</div>
+
+<!-- ── 1 Anmelden ─────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">01 · Erste Schritte</p>
+  <h2>Anmelden</h2>
+  <p class="lead">Auf der Website oben rechts <span class="ui">Login</span> klicken – oder direkt <code>/admin/login</code> aufrufen.</p>
+  <figure class="half"><img src="cms-anleitung-bilder/01-login.png" alt="Anmeldeseite" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>E-Mail-Adresse</b>Die Adresse, mit der Ihr Zugang angelegt wurde.</li>
+    <li><span class="n">2</span><b>Passwort</b>Beim ersten Mal das Startpasswort, das Sie erhalten haben.</li>
+    <li><span class="n">3</span><b>Anmelden</b>Klicken – fertig.</li>
+  </ol>
+  <div class="box"><b>Beim ersten Anmelden</b><p>Das CMS verlangt sofort ein <b>eigenes Passwort</b> (mindestens 12 Zeichen). Vorher ist nichts anderes freigeschaltet.</p></div>
+  <div class="box tip"><b>Schnell zurück ins CMS</b><p>Solange Sie angemeldet sind, steht oben auf der Website <span class="ui">Admin</span> statt <span class="ui">Login</span>.</p></div>
+</section>
+
+<section class="page">
+  <p class="eyebrow">01 · Erste Schritte</p>
+  <h2>Das Dashboard</h2>
+  <p class="lead">Nach dem Anmelden landen Sie hier. Links ist immer die Seitenleiste, rechts der Arbeitsbereich.</p>
+  <figure><img src="cms-anleitung-bilder/02-dashboard.png" alt="Dashboard" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Seitenleiste</b>Startseite, Beiträge (News), Events, Bildergalerien, Kategorien – darunter Zugänge, Passwort und «Seite ansehen».</li>
+    <li><span class="n">2</span><b>Abkürzungen</b>Jede Karte führt direkt in einen Bereich.</li>
+  </ol>
+  <h3>Entwurf oder öffentlich?</h3>
+  <div class="flow"><span class="step">Entwurf</span><span class="arrow">→</span>nur im CMS sichtbar, weiterarbeiten jederzeit<span class="arrow">→</span><span class="step">Veröffentlichen</span><span class="arrow">→</span>nach spätestens 1 Minute auf der Website</div>
+  <div class="box tip"><b>Adressen entstehen automatisch</b><p>Die Website-Adresse (z. B. <code>/events/weiterbildungstag-2026</code>) wird aus dem Titel gebildet. Sie müssen nichts eintragen.</p></div>
+</section>
+
+<!-- ── 2 Startseite ───────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">02 · Startseite</p>
+  <h2>Titelbild der Startseite austauschen</h2>
+  <p class="lead">In der Seitenleiste <span class="ui">Startseite</span> öffnen. Die blaue Fläche ist eine Vorschau des Kopfbereichs der Website.</p>
+  <figure><img src="cms-anleitung-bilder/03-startseite.png" alt="CMS-Seite Startseite" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Bild ersetzen</b>Öffnet die Bildauswahl (Kapitel 07). Ein Klick auf ein Bild speichert sofort.</li>
+    <li><span class="n">2</span><b>Vorschau</b>So erscheint das Bild auf der Website – im Hochformat zugeschnitten.</li>
+    <li><span class="n">3</span><b>Entfernen</b>Die Startseite zeigt dann wieder die neutrale Fläche.</li>
+  </ol>
+  <div class="box"><b>Welches Bild eignet sich?</b><p>Am besten ein <b>Hochformat</b> (etwa 4 : 5), mindestens 1000 Pixel breit. Querformate werden von der Mitte aus zugeschnitten – Köpfe am Rand können wegfallen.</p></div>
+</section>
+
+<section class="page">
+  <p class="eyebrow">02 · Startseite</p>
+  <h2>Das Ergebnis auf der Website</h2>
+  <p class="lead">Spätestens eine Minute nach dem Speichern steht das neue Bild auf der Startseite.</p>
+  <figure><img src="cms-anleitung-bilder/14-website-start.png" alt="Startseite der Website" /></figure>
+  <ol class="legend one">
+    <li><span class="n">1</span><b>Titelbild</b>Das im CMS gewählte Bild neben dem Titel des Verbands.</li>
+  </ol>
+</section>
+
+<!-- ── 3 News ─────────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">03 · News</p>
+  <h2>Die Liste der Beiträge</h2>
+  <p class="lead">Beiträge sind die News des Verbands – auf der Website unter <i>Verband → News</i>.</p>
+  <figure><img src="cms-anleitung-bilder/05-beitraege.png" alt="Liste der Beiträge" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Neuer Beitrag</b>Öffnet einen leeren Beitrag.</li>
+    <li><span class="n">2</span><b>Filter und Suche</b>Alle / Veröffentlicht / Entwürfe, dazu Suche nach Titel oder Kategorie.</li>
+    <li><span class="n">3</span><b>Bearbeiten, Ansehen, Löschen</b>Löschen entfernt nur den Beitrag – die Bilder bleiben im Bestand.</li>
+  </ol>
+</section>
+
+<section class="page">
+  <p class="eyebrow">03 · News</p>
+  <h2>Einen Beitrag schreiben</h2>
+  <figure><img src="cms-anleitung-bilder/06-editor.png" alt="Beitragseditor" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Bausteine</b>Anklicken hängt einen Baustein unten an, ziehen setzt ihn an eine bestimmte Stelle.</li>
+    <li><span class="n">2</span><b>Titel</b>Darunter der Anrisstext: zwei, drei Sätze für die Übersicht.</li>
+    <li><span class="n">3</span><b>Inhalt</b>Die Bausteine des Beitrags – hier ein Textbaustein (Kapitel 04).</li>
+    <li><span class="n">4</span><b>Einstellungen</b>Titelbild, Datum, Hauptkategorie und weitere Kategorien, Autor, Status.</li>
+    <li><span class="n">5</span><b>Speichern</b><span class="ui">Als Entwurf speichern</span> oder <span class="ui main">Veröffentlichen</span>. Danach zeigt <span class="ui">Ansehen</span> den Beitrag auf der Website.</li>
+  </ol>
+  <div class="box"><b>«Nicht gespeichert»</b><p>Steht das oben neben dem Status, sind Änderungen offen. Erst speichern, dann die Seite verlassen.</p></div>
+</section>
+
+<!-- ── 4 Bausteine ────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">04 · Inhalt</p>
+  <h2>Mit Bausteinen arbeiten</h2>
+  <p class="lead">Jeder Baustein ist ein Abschnitt auf der Seite. Die Gestaltung übernimmt die Website – Sie liefern nur Text und Bilder.</p>
+  <figure><img src="cms-anleitung-bilder/07-baustein.png" alt="Ein Baustein im Editor" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Griff ⋮⋮</b>Gedrückt halten und ziehen, um den Baustein zu verschieben.</li>
+    <li><span class="n">2</span><b>▲ ▼ ✕</b>Nach oben, nach unten, entfernen – ohne Ziehen.</li>
+    <li><span class="n">3</span><b>Bildplatz</b>Klick öffnet die Bildauswahl. Darunter <i>Ersetzen</i> und <i>Entfernen</i>.</li>
+  </ol>
+  <table>
+    <tr><th>Baustein</th><th>Wofür</th><th>Baustein</th><th>Wofür</th></tr>
+    <tr><td>Text</td><td>Ein Absatz Fliesstext</td><td>Tabelle</td><td>z. B. ein Programm; Kopfzeile möglich</td></tr>
+    <tr><td>Zwischentitel</td><td>Gliedert lange Texte</td><td>Dokumente</td><td>PDF, Word, Excel zum Herunterladen</td></tr>
+    <tr><td>Bild</td><td>Ein Bild, ganze Breite</td><td>Link</td><td>Verweis auf eine Seite</td></tr>
+    <tr><td>Bildpaar</td><td>Zwei Bilder nebeneinander</td><td>Zitat</td><td>Hervorgehobene Aussage</td></tr>
+  </table>
+  <div class="box"><b>Leere Bausteine</b><p>Ein Baustein ohne Inhalt wird beim Speichern gemeldet («Diese Bausteine sind noch leer: 3»). Füllen oder mit ✕ entfernen.</p></div>
+</section>
+
+<!-- ── 5 Events ───────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">05 · Events</p>
+  <h2>Verbandsanlass: die Eckdaten</h2>
+  <p class="lead"><span class="ui">Events</span> öffnen, <span class="ui main">Neues Event</span> klicken, Titel eintragen. Darunter stehen die Eckdaten – das, was Besucher suchen.</p>
+  <figure><img src="cms-anleitung-bilder/08-event-eckdaten.png" alt="Eckdaten eines Events" style="max-height: 158mm; object-fit: cover; object-position: top;" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Untertitel</b>Klein über dem Titel, z. B. «Workshop / Weiterbildung». Optional.</li>
+    <li><span class="n">2</span><b>Wann</b><b style="display:inline">Datum (Pflicht)</b>, Beginn und Ende. Ohne Beginn = ganztägig.</li>
+    <li><span class="n">3</span><b>Wo</b><b style="display:inline">Ort (Pflicht)</b>, Strasse, PLZ und Ort – daraus entsteht «Route planen».</li>
+    <li><span class="n">4</span><b>Preise</b>Pro Zeile Bezeichnung und Betrag. <span class="ui">+ Preisstufe</span> für weitere.</li>
+  </ol>
+</section>
+
+<section class="page">
+  <p class="eyebrow">05 · Events</p>
+  <h2>Verbandsanlass: Anmeldung und Zutritt</h2>
+  <figure><img src="cms-anleitung-bilder/09-event-anmeldung.png" alt="Anmeldung und Zutritt" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Link zur Anmeldung</b>Formular, Website oder <code>mailto:anmeldung@…</code>. Leer = kein Anmeldeknopf.</li>
+    <li><span class="n">2</span><b>Zielgruppe</b>Mehrere durch Komma trennen – jede wird ein eigenes Schild.</li>
+    <li><span class="n">3</span><b>Zutrittskonditionen</b>Ein Satz, z. B. Anmeldeschluss.</li>
+    <li><span class="n">4</span><b>Nur für Mitglieder</b>Schalter; zeigt ein Schild in der Übersicht und auf der Seite.</li>
+  </ol>
+  <p>Unter <b>Inhalt</b> folgen Programm, Referenten oder Unterlagen als Bausteine. Rechts Titelbild und Kategorie wählen, dann <span class="ui main">Veröffentlichen</span>.</p>
+  <div class="box"><b>Häufige Fehlermeldungen</b><p>«Das Ende muss nach dem Beginn liegen» – Uhrzeiten prüfen. «Preis 2 braucht eine Bezeichnung und einen Betrag» – die Zeile ganz ausfüllen oder ganz leeren.</p></div>
+</section>
+
+<section class="page">
+  <p class="eyebrow">05 · Events</p>
+  <h2>So sieht der Anlass auf der Website aus</h2>
+  <figure><img src="cms-anleitung-bilder/10-event-website.png" alt="Event auf der Website" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Kopf</b>Untertitel, Titel, Datum, Zeit und Ort auf einen Blick.</li>
+    <li><span class="n">2</span><b>Datum</b>Mit «In den Kalender eintragen» – inkl. Erinnerung einen Tag vorher.</li>
+    <li><span class="n">3</span><b>Preis</b>Alle Preisstufen.</li>
+    <li><span class="n">4</span><b>Ort</b>Adresse mit «Route planen» und «Frage zum Anlass».</li>
+    <li><span class="n">5</span><b>Jetzt anmelden</b>Führt zum Anmelde-Link.</li>
+  </ol>
+  <div class="box tip"><b>Läuft von allein</b><p>Kommende Anlässe stehen oben (der nächste hervorgehoben), vergangene darunter; die drei nächsten auch auf der Startseite. Nach dem Datum verschwinden Anmeldeknopf und Kalendereintrag automatisch.</p></div>
+</section>
+
+<!-- ── 6 Galerien ─────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">06 · Fotos</p>
+  <h2>Bildergalerien</h2>
+  <p class="lead"><span class="ui">Bildergalerien</span> öffnen, <span class="ui main">Neues Album</span> klicken, Titel und kurzen Anrisstext eintragen.</p>
+  <figure><img src="cms-anleitung-bilder/11-album.png" alt="Album bearbeiten" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Bild hinzufügen</b>Aus dem Bestand wählen oder neu hochladen – mehrmals für mehrere Bilder.</li>
+    <li><span class="n">2</span><b>Reihenfolge</b>Kacheln an ihren Platz ziehen oder mit ‹ › verschieben. ✕ nimmt ein Bild aus dem Album.</li>
+    <li><span class="n">3</span><b>Titelbild</b>Ohne eigene Wahl gilt das erste Bild. Darunter Datum, Ort, Kategorie und Status.</li>
+  </ol>
+</section>
+
+<!-- ── 7 Dateien ──────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">07 · Dateien</p>
+  <h2>Bilder und Dokumente wählen oder hochladen</h2>
+  <p class="lead">Überall, wo Sie ein Bild oder Dokument wählen, öffnet sich dieses Fenster.</p>
+  <figure><img src="cms-anleitung-bilder/04-auswahl.png" alt="Bildauswahl" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Suchen</b>Nach Bildbeschreibung oder Dateiname.</li>
+    <li><span class="n">2</span><b>Beschreibung</b>Zuerst eintragen, was auf dem neuen Bild zu sehen ist …</li>
+    <li><span class="n">3</span><b>Hochladen</b>… dann die Datei wählen. Sie erscheint sofort im Bestand.</li>
+    <li><span class="n">4</span><b>Wählen</b>Ein Klick auf eine Kachel übernimmt das Bild. Ein Schloss heisst: in Gebrauch, nicht löschbar.</li>
+  </ol>
+  <table>
+    <tr><th>Art</th><th>Erlaubt</th></tr>
+    <tr><td>Bilder</td><td>JPG, PNG, WebP, GIF – bis 8 MB</td></tr>
+    <tr><td>Dokumente</td><td>PDF, Word, Excel, PowerPoint – bis 20 MB</td></tr>
+  </table>
+  <div class="box"><b>Bildbeschreibung nicht vergessen</b><p>Sie wird Menschen vorgelesen, die nicht sehen können. Kurz und konkret: «Teilnehmende am Workshop in der Aula» statt «IMG_4021».</p></div>
+</section>
+
+<!-- ── 8 Verwaltung ───────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">08 · Verwaltung</p>
+  <h2>Kategorien</h2>
+  <figure><img src="cms-anleitung-bilder/12-kategorien.png" alt="Kategorien" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Neue Kategorie</b>Namen eintragen, <i>Anlegen</i>. Sofort in allen Editoren wählbar.</li>
+    <li><span class="n">2</span><b>Verwendung</b>Wie viele Beiträge, Events und Alben sie tragen.</li>
+    <li><span class="n">3</span><b>Löschen</b>Nur bei unbenutzten Kategorien möglich.</li>
+  </ol>
+
+</section>
+
+<section class="page">
+  <p class="eyebrow">08 · Verwaltung</p>
+  <h2>Zugänge</h2>
+  <p class="lead">Wer sich am CMS anmelden darf. Jede Person bekommt einen eigenen Zugang.</p>
+  <figure><img src="cms-anleitung-bilder/13-zugaenge.png" alt="Zugänge" /></figure>
+  <ol class="legend">
+    <li><span class="n">1</span><b>Neuer Zugang</b>E-Mail eintragen, <i>Anlegen</i>. Das Startpasswort erscheint <b style="display:inline">nur dieses eine Mal</b>.</li>
+    <li><span class="n">2</span><b>Geschützt</b>Der Hauptzugang lässt sich nicht löschen.</li>
+    <li><span class="n">3</span><b>Startpasswort aktiv</b>Die Person hat sich noch nicht angemeldet.</li>
+  </ol>
+  <div class="box"><b>Sicherheit</b><p>Jede Person bekommt einen eigenen Zugang – Passwörter nie teilen. Das Startpasswort persönlich weitergeben, nicht per Gruppenchat.</p></div>
+</section>
+
+<!-- ── 9 FAQ ──────────────────────────────────────────────── -->
+<section class="page">
+  <p class="eyebrow">09 · Hilfe</p>
+  <h2>Häufige Fragen</h2>
+  <div class="box"><b>Meine Änderung ist nicht zu sehen.</b><p>Die Website zeigt Neues nach spätestens einer Minute. Und: Steht der Status auf <b>Öffentlich</b>?</p></div>
+  <div class="box"><b>«Ohne Titel geht es nicht.»</b><p>Jeder Eintrag braucht einen Titel – Events zusätzlich Datum und Ort.</p></div>
+  <div class="box"><b>Ein Bild lässt sich nicht löschen.</b><p>Es wird noch verwendet. Die Meldung nennt die Stellen – dort zuerst ein anderes Bild einsetzen.</p></div>
+  <div class="box"><b>Ich wurde abgemeldet.</b><p>Einfach neu anmelden. Darum: lieber zwischendurch als Entwurf speichern.</p></div>
+  <div class="box"><b>Passwort vergessen?</b><p>Bei der Person melden, die die Zugänge verwaltet. Sie löscht Ihren Zugang und legt ihn mit einem neuen Startpasswort wieder an.</p></div>
+
+  <h3>Checkliste vor dem Veröffentlichen</h3>
+  <div class="box tip"><b>Kurz prüfen</b>
+    <p>☐ Titel und Kurzbeschreibung ohne Tippfehler<br />
+    ☐ Titelbild gesetzt, Bilder haben Beschreibungen<br />
+    ☐ Bei Events: Datum, Zeit, Ort, Preise und Anmeldelink kontrolliert<br />
+    ☐ Nach dem Veröffentlichen mit <span class="ui">Ansehen</span> auf der Website prüfen – auch auf dem Handy</p>
+  </div>
+  <p style="margin-top: 14pt; color: var(--muted); font-size: 8.5pt;">Die Screenshots zeigen Beispieldaten. Stand: Oktober 2026</p>
+</section>
+
+</body>
+</html>

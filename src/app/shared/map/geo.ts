@@ -76,6 +76,17 @@ export function directionsUrl(point: LatLng): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${point.lat.toFixed(6)},${point.lng.toFixed(6)}`;
 }
 
+/**
+ * Wegbeschreibung zu einer ausgeschriebenen Adresse statt zu Koordinaten.
+ *
+ * Fuer Events: sie haben keinen Plan mehr, nur Ort, Strasse und PLZ/Ort.
+ * Google Maps sucht die Adresse selbst – genauso zuverlaessig wie ein
+ * gesetzter Punkt, solange die Adresse stimmt.
+ */
+export function directionsToAddress(address: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+}
+
 // ── Adresssuche ─────────────────────────────────────────────
 
 /** Ein Treffer der Adresssuche. */

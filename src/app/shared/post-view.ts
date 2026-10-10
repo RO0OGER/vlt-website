@@ -5,12 +5,13 @@ import {
   ApiLocation,
   ApiPost,
   ApiPostDetail,
+  ApiPrice,
   ApiSection,
   ApiSectionKind,
   ApiTable,
 } from './content-api';
-import { MONTHS_DE_SHORT, formatDateLong, formatDateWithWeekday } from './dates';
-import { directionsUrl, openStreetMapUrl } from './map/geo';
+import { MONTHS_DE_SHORT, formatDateLong, formatDateWithWeekday, formatTimeRange } from './dates';
+import { directionsToAddress, directionsUrl, openStreetMapUrl } from './map/geo';
 
 /**
  * Umformung der API-Antworten in die Form, die die Templates erwarten.
@@ -109,14 +110,34 @@ export interface SectionView {
   map: MapSpot | null;
 }
 
-/** Datum, Zeit und Ort eines Events. */
+/**
+ * Die Angaben eines Events, wie die Detailseite sie zeigt. Leere Angaben
+ * sind leer ('' oder []) – die Vorlage blendet aus, was nicht gepflegt ist.
+ */
 export interface EventInfo {
   /** ISO-Datum fuer das datetime-Attribut. */
   date: string;
   /** Ausgeschrieben mit Wochentag: "Mittwoch, 4. November 2026". */
   dateLabel: string;
+  /** "HH:MM" fuer den Kalendereintrag, leer ohne Angabe. */
+  start: string;
+  end: string;
+  /** "17.30 – 21.00 Uhr", leer ohne Beginn. */
   time: string;
+  kicker: string;
   location: string;
+  street: string;
+  city: string;
+  /** Ort, Strasse und PLZ/Ort in einer Zeile – fuer Kalender und Route. */
+  address: string;
+  routeHref: string;
+  prices: ApiPrice[];
+  registrationUrl: string;
+  /** Fuehrt die Anmeldung von der Seite weg? Dann in einem neuen Fenster. */
+  registrationExternal: boolean;
+  audience: string[];
+  admission: string;
+  membersOnly: boolean;
 }
 
 export interface PostView extends PostCard {
@@ -142,6 +163,8 @@ export interface EventCard {
   year: string;
   time: string;
   location: string;
+  kicker: string;
+  membersOnly: boolean;
   cover: ViewImage;
 }
 
@@ -294,14 +317,40 @@ export function toPostView(p: ApiPostDetail): PostView {
       (c, i, all): c is string => !!c && all.indexOf(c) === i,
     ),
     sections: p.sections.map(toSectionView),
-    event: p.eventDate
-      ? {
-          date: p.eventDate,
-          dateLabel: formatDateWithWeekday(p.eventDate),
-          time: p.eventTime ?? '',
-          location: p.location ?? '',
-        }
-      : null,
+    event: p.eventDate ? toEventInfo(p, p.eventDate) : null,
+  };
+}
+
+function toEventInfo(p: ApiPostDetail, date: string): EventInfo {
+  const location = p.location ?? '';
+  const street = p.street ?? '';
+  const city = p.city ?? '';
+  const address = [location, street, city].filter((part) => part !== '').join(', ');
+  const registrationUrl = p.registrationUrl ?? '';
+
+  return {
+    date,
+    dateLabel: formatDateWithWeekday(date),
+    start: p.eventStart ?? '',
+    end: p.eventEnd ?? '',
+    time: formatTimeRange(p.eventStart, p.eventEnd),
+    kicker: p.kicker ?? '',
+    location,
+    street,
+    city,
+    address,
+    routeHref: directionsToAddress(address),
+    prices: p.prices ?? [],
+    registrationUrl,
+    // Wie beim Link-Baustein: eine Adresse der eigenen Seite beginnt mit "/".
+    registrationExternal: registrationUrl !== '' && !registrationUrl.startsWith('/'),
+    // "Lehrpersonen, Schulleitungen" wird zu zwei Abzeichen.
+    audience: (p.audience ?? '')
+      .split(',')
+      .map((group) => group.trim())
+      .filter((group) => group !== ''),
+    admission: p.admission ?? '',
+    membersOnly: p.membersOnly ?? false,
   };
 }
 
@@ -318,8 +367,10 @@ export function toEventCard(e: ApiEvent): EventCard {
     day: String(Number(day) || day),
     month: MONTHS_DE_SHORT[Number(month) - 1] ?? month,
     year,
-    time: e.eventTime ?? '',
+    time: formatTimeRange(e.eventStart, e.eventEnd),
     location: e.location,
+    kicker: e.kicker ?? '',
+    membersOnly: e.membersOnly ?? false,
     cover: toViewImage(e.cover, e.title),
   };
 }
